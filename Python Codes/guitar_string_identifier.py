@@ -10,17 +10,23 @@ import numpy as np
 from scipy.io import wavfile
 from scipy.fft import fft
 
-sample_rate, audio_data = wavfile.read('Python Codes\Eh_note.wav')
+sample_rate, audio_data = wavfile.read('Python Codes\E_note.wav')
 # print(sample_rate)
 # print(audio_data)
 
 # audio_data = np.mean(audio_data, axis=1)  # sterio to mono
 frequencies = fft(audio_data)  # fft transform extract frequencies
 frequencies = np.abs(frequencies)  # only take absolute among complex
-print(frequencies)
+# print(frequencies)
 frequency = np.argmax(frequencies) 
-print(frequency)# get index of maximum value among them
+# print(frequency)# get index of maximum value among them
 
 frequency_in_hertz = frequency * sample_rate / len(audio_data)  # convert to herts
 
 print(frequency_in_hertz)
+# 329.63 Hz - Eh 
+# 246.94 Hz - B
+# 196.00 Hz - G
+# 146.83 Hz - D
+# 110.00 Hz - A
+# 82.41 Hz - El
