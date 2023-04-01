@@ -83,7 +83,7 @@ def is_off_tune(f):
 
 
 while True:
-    frequency = 350  # give frquency input
+    frequency = int(input("frequency:"))  # give frquency input
     status, note = is_off_tune(frequency)
     if status == "T":
         print(f"Tuned {note}")
