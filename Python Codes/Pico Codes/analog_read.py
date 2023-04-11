@@ -8,4 +8,4 @@ adc = ADC(Pin(26))
 while True:
     value = adc.read_u16()
     print("Analog value:", value)
-    time.sleep(0.01)
+    time.sleep(1)
