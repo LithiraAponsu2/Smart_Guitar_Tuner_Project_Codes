@@ -6,7 +6,7 @@
 #define MIC 26 
 
 const uint16_t samples = 1024;
-const uint16_t samplingFrequency = 16000; 
+const uint16_t samplingFrequency = 8000; 
 
 int16_t wave[samples];
 double vReal[samples];       
@@ -21,7 +21,7 @@ void setup() {
 
 void loop() {
   for (int i = 0; i < samples; i++) {
-    wave[i] = analogRead(MIC) - 1500;
+    wave[i] = analogRead(MIC);
     delay(1000/samplingFrequency);              
   }
 
@@ -30,6 +30,7 @@ void loop() {
     vImag[i] = 0;
   }
 
+  FFT.DCRemoval(); 
   FFT.Windowing(FFT_WIN_TYP_HAMMING, FFT_FORWARD);
   FFT.Compute(FFT_FORWARD);
   FFT.ComplexToMagnitude();

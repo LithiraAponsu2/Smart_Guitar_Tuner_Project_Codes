@@ -9,7 +9,7 @@ gc.collect()
 print(gc.mem_free())
 
 SAMPLE_RATE_HZ = 500
-RECORD_TIME_S = 2
+RECORD_TIME_S = 1
 
 # Set up ADC
 # SAMPLE_WIDTH_BITS = 12

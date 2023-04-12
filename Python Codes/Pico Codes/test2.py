@@ -1,9 +1,14 @@
 import math
 import cmath
 import array
+from ulab import numpy as np
 
 arr = [0.0000 + 1.0000j, -0.8660 - 0.5000j, 0.8660 - 0.5000j, -0.0000 + 1.0000j]
 
+a = [0.0000, -0.8660, 0.8660 , -0.0000]
+a_ = np.array(a)
+b = [1.0000,-0.5000,-0.5000, 1.0000]
+b_ = np.array(b)
 
 # 
 # Computes the discrete Fourier transform (DFT) of the given complex vector, returning the result as a new vector.
@@ -114,3 +119,7 @@ def _log2(x):
 
 
 print(transform(arr))
+
+c, d = np.fft.fft(a_, b_)
+print(c)
+print(d)
