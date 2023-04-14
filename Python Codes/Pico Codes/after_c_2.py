@@ -2,6 +2,7 @@ from ulab import numpy as np
 from machine import Pin, ADC
 import utime
 import gc
+import math
 
 gc.collect()
 print(gc.mem_free())
@@ -9,11 +10,47 @@ print(gc.mem_free())
 MIC = ADC(0)
 
 samples = 1024
-sampling_frequency = 3000
+sampling_frequency = 8000
 
 # Define the frequency range to keep
 f_low = 0  # <El
 f_high = 400  # >Eh
+
+def low_pass_filter(adata_real, adata_imag, bandlimit, sampling_rate):
+    
+    
+    #bandlimit_index = int(bandlimit * adata_real.size / sampling_rate)
+    
+    #fsig_real = np.zeros(len(adata_real))
+    #fsig_imag = np.zeros(len(adata_imag))
+    
+    #fsig_real, fsig_imag = np.fft.fft(adata_real, adata_imag)
+        
+    #fsig_real[bandlimit_index+1:len(fsig_real)-bandlimit_index] = 0
+    #fsig_imag[bandlimit_index+1:len(fsig_imag)-bandlimit_index] = 0
+            
+    #fsig_real, fsig_imag = np.fft.ifft(fsig_real, fsig_imag)
+    
+    #return fsig_real
+    
+    # Compute the frequency resolution of the FFT
+    freq_res = sampling_rate / len(adata_real)
+    
+    # Compute the index of the cutoff frequency
+    cutoff_index = int(bandlimit / freq_res)
+    
+    fsig_real = np.zeros(len(adata_real))
+    fsig_imag = np.zeros(len(adata_imag))
+    
+    fsig_real, fsig_imag = np.fft.fft(adata_real, adata_imag)
+    
+    fsig_real[cutoff_index+1:len(fsig_real)-cutoff_index] = 0
+    fsig_imag[cutoff_index+1:len(fsig_imag)-cutoff_index] = 0
+    
+    # Compute the inverse FFT to obtain the filtered signal
+    fsig_real, fsig_imag = np.fft.ifft(fsig_real, fsig_imag)
+    
+    return fsig_real
 
 wave = np.zeros(samples, dtype=np.int16)
 vReal = np.zeros(samples, dtype=np.float)
@@ -46,11 +83,10 @@ def dc_removal(arr):
     arr -= mean
     return arr
 
-
 while True:
     for i in range(samples):
         wave[i] = -MIC.read_u16()
-        #print(wave[i])
+        print(wave[i])
         utime.sleep_us(int(1000000/sampling_frequency))
     #print(wave)
     
@@ -63,6 +99,9 @@ while True:
     #vReal = dc_removal(vReal)
     #np.fft.hamming(vReal)
     #vReal = hamming_window(vReal)
+    
+    vReal = low_pass_filter(vReal, vImag, 500, sampling_frequency)
+    
     vReal = hanning_window(vReal)
     vReal, vImag = np.fft.fft(vReal, vImag)
     
@@ -85,3 +124,4 @@ while True:
     print(f"finally free {gc.mem_free()}")
     print(f"=============================")
     utime.sleep(5)
+

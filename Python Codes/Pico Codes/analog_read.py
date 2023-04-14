@@ -1,14 +1,26 @@
 from machine import Pin, ADC
-import time
+import utime
 
 # initialize ADC
 adc = ADC(0)
+sample_count = 1
 
 # read analog value every 1 second
-while True:
+while sample_count < 16385:
     value = adc.read_u16()
-    print("Analog value:", value)
-    time.sleep(1)
+    #print(value, end=", ")
+    
+    if value > 40000 or value < 30000:
+        print(value, end=", ")
+    
+    else:
+        print(0, end=", ")
+    
+    if sample_count % 25 == 0:
+        print()
+    #time.sleep(1)
+    utime.sleep_us(int(1000000/8000))
+    sample_count+=1
 
 """import machine
 import utime
