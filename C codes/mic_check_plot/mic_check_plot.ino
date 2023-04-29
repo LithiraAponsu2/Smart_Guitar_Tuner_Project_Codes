@@ -16,5 +16,5 @@ void setup() {
 void loop() {
   micValue = analogRead(micPin)-2000; // read analog value from microphone module
   Serial.println(micValue); // print analog value to serial monitor
-  delay(1); // wait for 10 milliseconds before taking the next reading
+  delay(100); // wait for 10 milliseconds before taking the next reading
 }
