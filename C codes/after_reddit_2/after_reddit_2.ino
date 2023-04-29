@@ -3,10 +3,11 @@
 #include <Arduino.h>
 #include "arduinoFFT.h"
 
-#define MIC 26
+#define MIC 28
 
 const int samples = 4096;
-const int samplingFrequency = 8000;
+const int samplingFrequency = 8000/2.08;
+
 
 int temp;
 double mean;
@@ -48,22 +49,42 @@ void loop() {
 
     for (int i = 0; i < samples; i++) {
       vReal[i] = wave[i] - mean; 
-      // Serial.print(vReal[i]);
-      // Serial.print(", ");
+      Serial.print(vReal[i]);
+      Serial.print(", ");
                   
     }
 
-    // Serial.println();
+    Serial.println();
 
     FFT.Windowing(FFT_WIN_TYP_HAMMING, FFT_FORWARD);
 
     FFT.Compute(FFT_FORWARD);
 
-    FFT.ComplexToMagnitude();
+    // FFT.ComplexToMagnitude();
 
-    double x = FFT.MajorPeak();
+    // double x = FFT.MajorPeak();
 
-    Serial.println(x, 2);
+    // Serial.println(x, 2);
+
+    for (int i = 0; i < samples; i++) {
+      vReal[i] = pow(vReal[i], 2);
+    }
+
+    int binIndex50Hz = 50 * samples / samplingFrequency;
+    int binIndex400Hz = 400 * samples / samplingFrequency;
+
+    double maxPower = 0;
+    int maxPowerIndex = 0;
+    for (int i = binIndex50Hz; i <= binIndex400Hz; i++) {
+      if (vReal[i] > maxPower) {
+        maxPower = vReal[i];
+        maxPowerIndex = i;
+      }
+    }
+
+    double maxPowerFrequency = maxPowerIndex * samplingFrequency / samples;
+
+    Serial.println(maxPowerFrequency, 2);
 
   }
 
