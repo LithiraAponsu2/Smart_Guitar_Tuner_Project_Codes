@@ -3,9 +3,11 @@
 #include <Arduino.h>
 #include "arduinoFFT.h"
 
-#define MIC 28
+// #define MIC 26  // for pico
+#define MIC 15  // esp32
+// int MIC = 15;
 
-const int samples = 4096;
+const int samples = 1024;
 const int samplingFrequency = 8000/2.08;
 
 
@@ -31,7 +33,9 @@ void setup() {
 void loop() {
 
   temp = analogRead(MIC);
-  if (temp > 2150){
+  Serial.println(temp);
+  delay(100);
+  if (temp > 1800){  //  > 2150 pico
 
     int wave[samples] = {0};
     double vReal[samples] = {0};       
