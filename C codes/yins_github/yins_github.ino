@@ -10,11 +10,11 @@ void setup() { // put your setup code here, to run once:
 void loop() { // put your main code here, to run repeatedly:
 
   temp = analogRead(26);
-  if (temp > 2500) {
+  if (temp > 3000) {
 
     for (int i = 0; i < 4001; i++) {
       x[i] = analogRead(26);
-      delayMicroseconds(125);
+      delayMicroseconds(118);
     }
 
     float y[4000]; //array to store the moving average
