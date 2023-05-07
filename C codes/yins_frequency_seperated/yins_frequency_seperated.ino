@@ -105,106 +105,176 @@ void setup() { // put your setup code here, to run once:
   analogReadResolution(12); //Setting up the baud rate 
 }
 
-float listen() { 
-  temp = analogRead(26);
-  if (temp > 2500) {
-    return get_freq();  // need to return
-  }
-}
+// float listen() { 
+//   temp = analogRead(26);
+//   if (temp > 2500) {
+//     return get_freq();  // need to return
+//   }
+//   return 0.0;
+// }
 
 void El_tune(){
-  float temp2 = listen();
   int temp3 = 0;
-  while (temp == 0){
-    if(80 => temp2){  // under
-      Serial.println("under");
-    }
-    else if(temp2 >= 82){  // over
-      Serial.println("over");
-    }
-    else{  // if (80 < temp2 < 82) tuned
-      Serial.println("tuned");
-      temp3 == 1;
+  float temp2;
+  
+  while (temp3 == 0){
+    temp = analogRead(26);
+    if (temp > 2500) {
+      temp2 = get_freq();
+      if(70 < temp2 && temp2 < 80){  // under
+        Serial.println("under");
+        Serial.println(temp2);
+      }
+      else if(83 < temp2 && temp2 < 93){  // over
+        Serial.println("over");
+        Serial.println(temp2);
+      }
+      else if(80 <= temp2 && temp2 <= 83){  // if (80 < temp2 < 82) tuned
+        Serial.println("tuned");
+        Serial.println(temp2);
+        temp3 == 1;
+      }
+      else{
+        Serial.println("Stray");
+      }
     }
   }
+  
+  
 }
 
 void A_tune(){
-  float temp2 = listen();
   int temp3 = 0;
-  while (temp == 0){
-    if(108 => temp2){  // under
-      Serial.println("under");
-    }
-    else if(temp2 >= 110){  // over
-      Serial.println("over");
-    }
-    else{  // if (108 < temp2 < 110) tuned
-      temp3 == 1;
+  float temp2;
+  while (temp3 == 0){
+    temp = analogRead(26);
+    if (temp > 2500) {
+      temp2 = get_freq();
+      if(100 < temp2 && temp2 < 107){  // under
+        Serial.println("under");
+        Serial.println(temp2);
+      }
+      else if(111 < temp2 && temp2 < 114){  // over
+        Serial.println("over");
+        Serial.println(temp2);
+      }
+      else if(107 <= temp2 && temp2 <= 111){  // if (108 < temp2 < 110) tuned
+        Serial.println("tuned");
+        Serial.println(temp2);
+        temp3 == 1;
+      }
+      else{
+        Serial.println("Stray");
+      }
     }
   }
 }
 
 void D_tune(){
-  float temp2 = listen();
   int temp3 = 0;
-  while (temp == 0){
-    if(145 => temp2){  // under
-      Serial.println("under");
-    }
-    else if(temp2 >= 146){  // over
-      Serial.println("over");
-    }
-    else{  // if (145 < temp2 < 146) tuned
-      temp3 == 1;
+  float temp2;
+  while (temp3 == 0){
+    temp = analogRead(26);
+    if (temp > 2500) {
+      temp2 = get_freq();
+      if(135 < temp2 && temp2 < 144){  // under
+        Serial.println("under");
+        Serial.println(temp2);
+      }
+      else if(146 < temp2 && temp2 < 153){  // over
+        Serial.println("over");
+        Serial.println(temp2);
+      }
+      else if(144 <= temp2 && temp2 <= 146){  // if (145 < temp2 < 146) tuned
+        Serial.println("tuned");
+        Serial.println(temp2);
+        temp3 == 1;
+      }
+      else{
+        Serial.println("Stray");
+      }
     }
   }
 }
 
 void G_tune(){
-  float temp2 = listen();
   int temp3 = 0;
-  while (temp == 0){
-    if(190 => temp2){  // under
-      Serial.println("under");
-    }
-    else if(temp2 >= 195){  // over
-      Serial.println("over");
-    }
-    else{  // if (190 < temp2 < 195) tuned
-      temp3 == 1;
+  float temp2;
+  while (temp3 == 0){
+    temp = analogRead(26);
+    if (temp > 2500) {
+      temp2 = get_freq();
+      if(180 <= temp2 && temp2 <= 190){  // under
+        Serial.println("under");
+        Serial.println(temp2);
+      }
+      else if(196 < temp2 && temp2 < 205){  // over
+        Serial.println("over");
+        Serial.println(temp2);
+      }
+      else if(190 <= temp2 && temp2 <= 196){  // if (190 < temp2 < 195) tuned
+        Serial.println("tuned");
+        Serial.println(temp2);
+        temp3 == 1;
+      }
+      else{
+        Serial.println("Stray");
+      }
     }
   }
 }
 
 void B_tune(){
-  float temp2 = listen();
   int temp3 = 0;
-  while (temp == 0){
-    if(242 => temp2){  // under
-      Serial.println("under");
-    }
-    else if(temp2 >= 243){  // over
-      Serial.println("over");
-    }
-    else{  // if (242 < temp2 < 243) tuned
-      temp3 == 1;
+  float temp2;
+  while (temp3 == 0){
+    temp = analogRead(26);
+    if (temp > 2500) {
+      temp2 = get_freq();
+      if((235 < temp2 && temp2 < 241) || (115 < temp2 && temp2 < 122)){  // under
+        Serial.println("under");
+        Serial.println(temp2);
+      }
+      else if((243 < temp2 && temp2 < 250) || (124 < temp2 && temp2 < 130)){  // over
+        Serial.println("over");
+        Serial.println(temp2);
+      }
+      else if ((241 <= temp2 && temp2 <= 243) || (122 <= temp2 && temp2 <= 124)){  // if (242 < temp2 < 243) tuned
+        Serial.println("tuned");
+        Serial.println(temp2);
+        temp3 == 1;
+      }
+      else{
+        Serial.println("Stray");
+        Serial.println(temp2);
+      }
     }
   }
 }
 
 void Eh_tune(){
-  float temp2 = listen();
   int temp3 = 0;
-  while (temp == 0){
-    if(162 => temp2){  // under
-      Serial.println("under");
-    }
-    else if(temp2 >= 164){  // over
-      Serial.println("over");
-    }
-    else{  // if (162 < temp2 < 164) tuned
-      temp3 == 1;
+  float temp2;
+  while (temp3 == 0){
+    temp = analogRead(26);
+    if (temp > 2500) {
+      temp2 = get_freq();
+      if((155 < temp2 && temp2 < 162) || (325 < temp2 && temp2 < 332)){  // under
+        Serial.println("under");
+        Serial.println(temp2);
+      }
+      else if((164 < temp2 && temp2 < 170) || (334 < temp2 && temp2 < 340)){  // over
+        Serial.println("over");
+        Serial.println(temp2);
+      }
+      else if ((162 <= temp2 && temp2 <= 164) || (332 <= temp2 && temp2 <= 334)){  // if (162 < temp2 < 164) tuned
+        Serial.println("tuned");
+        Serial.println(temp2);
+        temp3 == 1;
+      }
+      else{
+        Serial.println("Stray");
+      }
     }
   }
 }
@@ -216,7 +286,12 @@ void loop() { // put your main code here, to run repeatedly:
   // if (temp > 2500) {
   //   Serial.println(get_freq());
   // }
-  El_tune();
+  // El_tune();
+  // A_tune();
+  // D_tune();
+  // G_tune();
+  B_tune();
+  // Eh_tune();
 
 
   
