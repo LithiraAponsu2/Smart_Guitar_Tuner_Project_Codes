@@ -1,4 +1,6 @@
+#include <CheapStepper.h>
 
+CheapStepper Stepper(2, 3, 4, 5);
 
 int x[4000] = {0};  // store analog values
 int temp;
@@ -124,10 +126,12 @@ void El_tune(){
       if(70 < temp2 && temp2 < 80){  // under
         Serial.println("under");
         Serial.println(temp2);
+        motor_tight();
       }
       else if(83 < temp2 && temp2 < 93){  // over
         Serial.println("over");
         Serial.println(temp2);
+        motor_loose();
       }
       else if(80 <= temp2 && temp2 <= 83){  // if (80 < temp2 < 82) tuned
         Serial.println("tuned");
@@ -136,8 +140,10 @@ void El_tune(){
       }
       else{
         Serial.println("Stray");
+        Serial.println(temp2);
       }
     }
+    motor_tight();
   }
   
   
@@ -153,10 +159,12 @@ void A_tune(){
       if(100 < temp2 && temp2 < 107){  // under
         Serial.println("under");
         Serial.println(temp2);
+        motor_tight();
       }
       else if(111 < temp2 && temp2 < 114){  // over
         Serial.println("over");
         Serial.println(temp2);
+        motor_loose();
       }
       else if(107 <= temp2 && temp2 <= 111){  // if (108 < temp2 < 110) tuned
         Serial.println("tuned");
@@ -165,6 +173,7 @@ void A_tune(){
       }
       else{
         Serial.println("Stray");
+        Serial.println(temp2);
       }
     }
   }
@@ -180,10 +189,12 @@ void D_tune(){
       if(135 < temp2 && temp2 < 144){  // under
         Serial.println("under");
         Serial.println(temp2);
+        motor_tight();
       }
       else if(146 < temp2 && temp2 < 153){  // over
         Serial.println("over");
         Serial.println(temp2);
+        motor_loose();
       }
       else if(144 <= temp2 && temp2 <= 146){  // if (145 < temp2 < 146) tuned
         Serial.println("tuned");
@@ -192,6 +203,7 @@ void D_tune(){
       }
       else{
         Serial.println("Stray");
+        Serial.println(temp2);
       }
     }
   }
@@ -207,10 +219,12 @@ void G_tune(){
       if(180 <= temp2 && temp2 <= 190){  // under
         Serial.println("under");
         Serial.println(temp2);
+        motor_tight();
       }
       else if(196 < temp2 && temp2 < 205){  // over
         Serial.println("over");
         Serial.println(temp2);
+        motor_loose();
       }
       else if(190 <= temp2 && temp2 <= 196){  // if (190 < temp2 < 195) tuned
         Serial.println("tuned");
@@ -219,6 +233,7 @@ void G_tune(){
       }
       else{
         Serial.println("Stray");
+        Serial.println(temp2);
       }
     }
   }
@@ -234,10 +249,12 @@ void B_tune(){
       if((235 < temp2 && temp2 < 241) || (115 < temp2 && temp2 < 122)){  // under
         Serial.println("under");
         Serial.println(temp2);
+        motor_tight();
       }
       else if((243 < temp2 && temp2 < 250) || (124 < temp2 && temp2 < 130)){  // over
         Serial.println("over");
         Serial.println(temp2);
+        motor_loose();
       }
       else if ((241 <= temp2 && temp2 <= 243) || (122 <= temp2 && temp2 <= 124)){  // if (242 < temp2 < 243) tuned
         Serial.println("tuned");
@@ -262,10 +279,12 @@ void Eh_tune(){
       if((155 < temp2 && temp2 < 162) || (325 < temp2 && temp2 < 332)){  // under
         Serial.println("under");
         Serial.println(temp2);
+        motor_tight();
       }
       else if((164 < temp2 && temp2 < 170) || (334 < temp2 && temp2 < 340)){  // over
         Serial.println("over");
         Serial.println(temp2);
+        motor_loose();
       }
       else if ((162 <= temp2 && temp2 <= 164) || (332 <= temp2 && temp2 <= 334)){  // if (162 < temp2 < 164) tuned
         Serial.println("tuned");
@@ -274,9 +293,20 @@ void Eh_tune(){
       }
       else{
         Serial.println("Stray");
+        Serial.println(temp2);
       }
     }
   }
+}
+
+// motor codes 
+
+void motor_tight(){ // when under tuned
+  Stepper.moveDegreesCW(20);
+}
+
+void motor_loose(){  // when over tuned
+  Stepper.moveDegreesCCW(20);
 }
 
 void loop() { // put your main code here, to run repeatedly:
@@ -286,12 +316,12 @@ void loop() { // put your main code here, to run repeatedly:
   // if (temp > 2500) {
   //   Serial.println(get_freq());
   // }
-  // El_tune();
+  El_tune();
   // A_tune();
   // D_tune();
   // G_tune();
   // B_tune();
-  Eh_tune();
+  // Eh_tune();
 
 
   
