@@ -3,7 +3,7 @@
  #include <Wire.h> //This library allows you to communicate with I2C devices  
  //SDA -> GP4 and SCL -> GP5    
  #include <LiquidCrystal_I2C.h> //  This library is for character LCDs based on the HD44780 controller connected via I2C bus using the cheap I2C backpack modules based on the PCF8574 
- LiquidCrystal_I2C lcd(0x3F,16,2);  
+ LiquidCrystal_I2C lcd(0x27,16,2);  
  // if lcd is not print then use this 0x27..  
  //initialize the liquid crystal library
 //the first parameter is the I2C address
