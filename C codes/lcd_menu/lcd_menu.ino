@@ -1,173 +1,300 @@
+#include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 
-LiquidCrystal_I2C lcd(0x27, 16, 2);   // I2C address: "0x3F" or "0x27"
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-const byte upButtonPin = 4;
-const byte downButtonPin = 5;
-const byte rightButtonPin = 6;
-const byte leftButtonPin = 7;
-const byte tweeterPin = 9;
-const byte ledPin = 13;
-const byte ledPin_fade = 10; 
-int fade = 0;
+int upButton = 10;
+int downButton = 11;
+int selectButton = 12;  
+int backButton = 13;  
+int menu = 1;  // store pointed menu item
+int tune_menu = 1;  // store pointed tune string 1-El, 2-A, 3-D, 4-G, 5-B, 6-Eh
+int screen = 1;  // store menu screen
 
-
-String MenuItems[] = {  // Your menü items
-  "LED Switch",
-  "LED Brightness",
-  "menuitem 3",
-  "menuitem 4",
-  "menuitem 5",
-  "menuitem 6" 
-  // and so on... 
+byte upArrow[] = {
+  B00000,
+  B00000,
+  B00100,
+  B01110,
+  B11111,
+  B00000,
+  B00000,
+  B00000
 };
 
-void menuFunctions(int menu, byte right, byte left)  // Your menü functions
-{
-  if(menu == 1) // example function for 1. menü item
-  {
-    if(right == 1)
-    {
-      lcd.setCursor(0, 1);
-      lcd.print("Off   ");
-      lcd.setCursor(10, 1);
-      lcd.print("On  <<");
-      digitalWrite(ledPin, HIGH);
-    }
-    if(left == 1)
-    {
-      lcd.setCursor(0, 1);
-      lcd.print("Off <<");
-      lcd.setCursor(10, 1);
-      lcd.print("On    ");
-      digitalWrite(ledPin, LOW);
-    }
-  }
-  if(menu == 2) // example function for 2. menü item
-  {
-    if(right == 1)
-    {
-      fade += 20;
-      if(fade >= 255)
-      {
-        fade = 255;
-      }
-    }
-    if(left == 1)
-    {
-      fade -= 20;
-      if(fade <= 0)
-      {
-        fade = 0;
-      }
-    }
-    lcd.setCursor(0, 1);
-    lcd.print("Brightness:     ");
-    lcd.setCursor(12, 1);
-    lcd.print(fade);
-    analogWrite(ledPin_fade, fade);
-  }
-  if(menu == 3)
-  {
-    lcd.setCursor(0, 1);
-    lcd.print("Hello Menu Item 3");
-  }
-  // and so on... 
-}
+byte downArrow[] = {
+  B00000,
+  B00000,
+  B00000,
+  B00000,
+  B11111,
+  B01110,
+  B00100,
+  B00000
+};
 
+byte tuneUpArrow[] = {
+  B00100,
+  B01110,
+  B11111,
+  B00100,
+  B00100,
+  B00100,
+  B00100,
+  B00100
+};
 
-/***  do not modify  ***********************************************/
-template< typename T, size_t NumberOfSize > 
-size_t MenuItemsSize(T (&) [NumberOfSize]){ return NumberOfSize; }
-int numberOfMenuItems = MenuItemsSize(MenuItems) - 1;
-int currentMenuItem = 0;
-int previousMenuItem = 1;
-byte button_flag = 0;
-unsigned long previousMillis = millis();
-const int note = 4699;
-void beepsOnce()
-{
-  tone(tweeterPin, note, 125);
-  delay(60);
-  noTone(tweeterPin);
-}
-/*******************************************************************/
+byte tuneDownArrow[] = {
+  B00100,
+  B00100,
+  B00100,
+  B00100,
+  B00100,
+  B11111,
+  B01110,
+  B00100
+};
 
-void setup()
-{
-  pinMode(ledPin, OUTPUT);
-  pinMode(ledPin_fade, OUTPUT);
+byte allLight[] = {  // 3 width horizontal light
+  B01110,
+  B01110,
+  B01110,
+  B01110,
+  B01110,
+  B01110,
+  B01110,
+  B01110
+};
 
-  /************************************/
-  pinMode(upButtonPin, INPUT_PULLUP);
-  pinMode(downButtonPin, INPUT_PULLUP);
-  pinMode(rightButtonPin, INPUT_PULLUP);
-  pinMode(leftButtonPin, INPUT_PULLUP);
-  
+void setup() {
   lcd.begin();
-  // lcd.noBacklight();
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("Simple");
-  lcd.setCursor(3, 1);
-  lcd.print("Dynamic Menu");
-  delay(3000);
-  lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print("myhomethings.eu");
-  delay(5000);
-  lcd.clear();
+  lcd.backlight();
+  pinMode(upButton, INPUT_PULLUP);
+  pinMode(downButton, INPUT_PULLUP);
+  pinMode(selectButton, INPUT_PULLUP);
+  pinMode(backButton, INPUT_PULLUP);
+  updateTuneMenu();
+  updateMenu();
+  lcd.createChar(0, upArrow);
+  lcd.createChar(1, downArrow);
+  lcd.createChar(2, tuneUpArrow);
+  lcd.createChar(3, tuneDownArrow);
+  lcd.createChar(4, allLight);
 }
 
-void loop() 
-{
-  if(digitalRead(rightButtonPin) == LOW && button_flag == 0)
-  {
-    menuFunctions(currentMenuItem + 1, 1, 0);
-    button_flag = 1;
-    previousMillis = millis();
-    beepsOnce();
-  }
-  if(digitalRead(leftButtonPin) == LOW && button_flag == 0)
-  {
-    menuFunctions(currentMenuItem + 1, 0, 1);
-    button_flag = 1;
-    previousMillis = millis();
-    beepsOnce();
-  }
-  if(digitalRead(upButtonPin) == LOW && button_flag == 0)
-  {
-    ++currentMenuItem;
-    if(currentMenuItem > numberOfMenuItems )
-    {
-      currentMenuItem = numberOfMenuItems ;
+void loop() {
+  if (screen == 1) {
+    // Menu screen
+    if (!digitalRead(downButton)){
+      menu++;
+      updateMenu();
+      delay(100);
+      while (!digitalRead(downButton));  // avoid looping
     }
-    button_flag = 1;
-    previousMillis = millis();
-    beepsOnce();
-  }
-  else if(digitalRead(downButtonPin) == LOW && button_flag == 0)
-  {
-    currentMenuItem--;
-    if(currentMenuItem < 0)
-    {
-      currentMenuItem = 0;
+    if (!digitalRead(upButton)){
+      menu--;
+      updateMenu();
+      delay(100);
+      while(!digitalRead(upButton));
     }
-    button_flag = 1;
-    previousMillis = millis();
-    beepsOnce();
+    if (!digitalRead(selectButton)){
+      executeActionMain();
+      if (menu == 3) {
+        screen = 2; // Set screen to TuneMenu when executing action3
+      } else {
+        updateMenu();
+      }
+      delay(100);
+      while (!digitalRead(selectButton));
+    }
   }
-  if(currentMenuItem != previousMenuItem)
-  {
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print(MenuItems [currentMenuItem]);
-    menuFunctions(currentMenuItem + 1, 0, 0);
-    previousMenuItem = currentMenuItem;
+  if (screen == 2) {
+    // TuneMenu screen
+    if (!digitalRead(downButton)){
+      tune_menu++;             
+      updateTuneMenu();
+      delay(100);
+      while (!digitalRead(downButton));  // avoid looping
+    }
+    if (!digitalRead(upButton)){
+      tune_menu--;
+      updateTuneMenu();
+      delay(100);
+      while(!digitalRead(upButton));
+    }
+    if (!digitalRead(selectButton)){
+      screen = 3;
+      TunerPage();
+      delay(100);
+      while (!digitalRead(selectButton));
+    }
+    if (!digitalRead(backButton)){
+      screen = 1;
+      updateMenu();
+      delay(100);
+      while (!digitalRead(backButton));
+    }
   }
-  if(millis() - previousMillis >= 400) 
-  {
-    previousMillis = millis();
-    button_flag = 0;
+  if (screen == 3) {
+    // TuneMenu screen
+    if (!digitalRead(backButton)){
+      screen = 2;
+      updateTuneMenu();
+      delay(100);
+      while (!digitalRead(backButton));
+    }
   }
 }
+
+
+void updateMenu() {
+  switch (menu) {
+    case 0:
+      menu = 1;
+      break;
+    case 1:
+      lcd.clear();
+      lcd.print(">Wind/Unwind");
+      lcd.setCursor(0, 1);
+      lcd.print(" Auto Tune");
+      break;
+    case 2:
+      lcd.clear();
+      lcd.print(" Wind/Unwind");
+      lcd.setCursor(0, 1);
+      lcd.print(">Auto Tune");
+      break;
+    case 3:
+      lcd.clear();
+      lcd.print(">Semi-Auto Tune");
+      lcd.setCursor(0, 1);
+      lcd.print(" Future");
+      break;
+    case 4:
+      lcd.clear();
+      lcd.print(" Semi-Auto Tune");
+      lcd.setCursor(0, 1);
+      lcd.print(">Future");
+      break;
+    case 5:
+      menu = 4;
+      break;
+  }
+}
+
+void updateTuneMenu() {
+  switch (tune_menu) {
+    case 0:
+      tune_menu = 1;
+      break;
+    case 1:
+      lcd.clear();
+      lcd.print(">El A D G B Eh");
+      break;
+    case 2:
+      lcd.clear();
+      lcd.print(" El>A D G B Eh");
+      break;
+    case 3:
+      lcd.clear();
+      lcd.print(" El A>D G B Eh");
+      break;
+    case 4:
+      lcd.clear();
+      lcd.print(" El A D>G B Eh");
+      break;
+    case 5:
+      lcd.clear();
+      lcd.print(" El A D G>B Eh");
+      break;
+    case 6:
+      lcd.clear();
+      lcd.print(" El A D G B>Eh");
+      break;
+    case 7:
+      tune_menu = 6;
+      break;
+    default:
+      tune_menu = 1;  // Set tune_menu to 1 by default
+      break;
+  }
+}
+
+void executeActionMain() {
+  switch (menu) {
+    case 1:
+      action1();
+      break;
+    case 2:
+      action2();
+      break;
+    case 3:
+      action3();
+      break;
+    case 4:
+      action4();
+      break;
+  }
+}
+
+// actions of main menu
+void action1() {
+  lcd.clear();
+  lcd.createChar(0, upArrow);
+  lcd.setCursor(0, 0);
+  lcd.print("For Wind - ");
+  lcd.write(0);
+  lcd.setCursor(0, 1);
+  lcd.print("For Unwind - ");
+  lcd.write(1);
+  delay(1500);
+}
+void action2() {
+  lcd.clear();
+  lcd.print(">Auto Tune do");
+  delay(1500);
+}
+void action3() {  // Semi-Auto
+  lcd.clear();
+  screen = 2;
+  updateTuneMenu();
+}
+void action4() {
+  lcd.clear();
+  lcd.print(">Future Process");
+  delay(1500);
+}
+
+// tuner page 
+void TunerPage(){
+  lcd.clear();
+  lcd.setCursor(2, 0);
+  lcd.write(4);
+  lcd.setCursor(2, 1);
+  lcd.write(4);
+  lcd.setCursor(9, 1);
+  lcd.write(2);
+  lcd.setCursor(0, 0);
+  switch (tune_menu) {
+    case 1:
+      lcd.print("El");
+      break;
+    case 2:
+      lcd.print("A");
+      break;
+    case 3:
+      lcd.print("D");
+      break;
+    case 4:
+      lcd.print("G");
+      break;
+    case 5:
+      lcd.print("B");
+      break;
+    case 6:
+      lcd.print("Eh");
+      break;
+  }
+  
+}
+
