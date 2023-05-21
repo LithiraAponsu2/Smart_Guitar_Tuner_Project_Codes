@@ -104,6 +104,7 @@ float get_freq(){
 
 void setup() { // put your setup code here, to run once:
   Serial.begin(115200);
+  Stepper.setRpm(17);
   analogReadResolution(12); //Setting up the baud rate 
 }
 

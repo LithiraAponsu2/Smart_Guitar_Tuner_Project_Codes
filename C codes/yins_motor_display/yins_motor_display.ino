@@ -1,6 +1,8 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
+#include <CheapStepper.h>
 
+CheapStepper Stepper(6, 7, 8, 9);
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 int upButton = 10;
@@ -9,7 +11,8 @@ int selectButton = 12;
 int backButton = 13;  
 int menu = 1;  // store pointed menu item
 int tune_menu = 1;  // store pointed tune string 1-El, 2-A, 3-D, 4-G, 5-B, 6-Eh
-int screen = 1;  // store menu screen 1 - main menu, 2 - string menu, 3 - Semi auto tune page, 4 - wind unwind page 
+int screen = 1;  // store menu screen 1 - main menu, 2 - string menu, 3 - Semi auto tune page, 4 - wind unwind page
+
 
 byte upArrow[] = {
   B00000,
@@ -67,8 +70,10 @@ byte allLight[] = {  // 3 width horizontal light
 };
 
 void setup() {
+  Serial.begin();
   lcd.begin();
   lcd.backlight();
+  Stepper.setRpm(17);
   pinMode(upButton, INPUT_PULLUP);
   pinMode(downButton, INPUT_PULLUP);
   pinMode(selectButton, INPUT_PULLUP);
@@ -145,22 +150,22 @@ void loop() {
     }
   }
   if (screen == 4) {
-    // TuneMenu screen
-    if (!digitalRead(downButton)){
-      unWind();
-      delay(100);
-      while (!digitalRead(downButton));  // avoid looping
-    }
-    if (!digitalRead(upButton)){
-      wind();
-      delay(100);
-      while(!digitalRead(upButton));
-    }
-    if (!digitalRead(backButton)){
-      screen = 2;
-      updateMenu();
-      delay(100);
-      while (!digitalRead(backButton));
+    windUnwindPage();
+    delay(100);
+    while(true) {
+      if (!digitalRead(downButton)){
+        unWind();
+      }
+      if (!digitalRead(upButton)){
+        wind();
+      }
+      if (!digitalRead(backButton)){
+        screen = 1;
+        updateMenu();
+        delay(100);
+        while (!digitalRead(backButton));
+        break;
+      }
     }
   }
 }
@@ -240,6 +245,7 @@ void updateTuneMenu() {
 }
 
 void windUnwindPage() {
+  lcd.clear();
   lcd.createChar(0, upArrow);
   lcd.setCursor(0, 0);
   lcd.print("For Wind - ");
@@ -268,10 +274,9 @@ void executeActionMain() {
 
 // actions of main menu
 void action1() {
-  screen = 4;
   lcd.clear();
+  screen = 4;
   windUnwindPage();
-  delay(1500);
 }
 void action2() {
   lcd.clear();
@@ -322,11 +327,13 @@ void TunerPage(){
 }
 
 void unWind() {
-
+  Serial.println("CCW");
+  Stepper.moveDegreesCCW(20);
 }
 
 void wind() {
-
+  Serial.println("CW");
+  Stepper.moveDegreesCW(20);
 }
 
 
