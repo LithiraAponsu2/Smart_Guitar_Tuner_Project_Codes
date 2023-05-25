@@ -467,7 +467,9 @@ void El_tune(){
         Serial.println("under");
         Serial.println(temp2);
         tune_status = -1;
-        int point = floor((temp2 - 70) * 6/10);
+        float delta_f = temp2 - 70;
+        int angle = (10-delta_f) * 40/10;
+        int point = floor(delta_f * 6/10);
         lcd.clear();
         lcd.setCursor(2, 0);
         lcd.write(4);
@@ -479,13 +481,15 @@ void El_tune(){
         lcd.print("El");
         lcd.setCursor(3+point, 0);
         lcd.write(3);
-        motor_tight();
+        motor_tight(angle);
       }
       else if(83 < temp2 && temp2 < 93){  // over
         Serial.println("over");
         Serial.println(temp2);
         tune_status = 1;
-        int point = floor((temp2 - 83) * 6/10);
+        float delta_f = temp2 - 83;
+        int angle = delta_f * 40/10;
+        int point = floor(delta_f * 6/10);
         lcd.clear();
         lcd.setCursor(2, 0);
         lcd.write(4);
@@ -497,7 +501,7 @@ void El_tune(){
         lcd.print("El");
         lcd.setCursor(10+point, 0);
         lcd.write(3);
-        motor_loose();
+        motor_loose(angle);
       }
       else if(80 <= temp2 && temp2 <= 83){  // if (80 < temp2 < 82) tuned
         Serial.println("tuned");
@@ -548,7 +552,9 @@ void A_tune(){
         Serial.println("under");
         Serial.println(temp2);
         tune_status = -1;
-        int point = floor((temp2 - 100) * 6/7);
+        float delta_f = temp2 - 100;
+        int angle = (7-delta_f) * 40/7;
+        int point = floor(delta_f * 6/7);
         lcd.clear();
         lcd.setCursor(2, 0);
         lcd.write(4);
@@ -560,13 +566,15 @@ void A_tune(){
         lcd.print("A");
         lcd.setCursor(3+point, 0);
         lcd.write(3);
-        motor_tight();
+        motor_tight(angle);
       }
       else if(111 < temp2 && temp2 < 114){  // over
         Serial.println("over");
         Serial.println(temp2);
         tune_status = 1;
-        int point = floor((temp2 - 111) * 6/3);
+        float delta_f = temp2 - 111;
+        int angle = delta_f * 40/3;
+        int point = floor(delta_f * 6/3);
         lcd.clear();
         lcd.setCursor(2, 0);
         lcd.write(4);
@@ -578,7 +586,7 @@ void A_tune(){
         lcd.print("A");
         lcd.setCursor(10+point, 0);
         lcd.write(3);
-        motor_loose();
+        motor_loose(angle);
       }
       else if(107 <= temp2 && temp2 <= 111){  // if (108 < temp2 < 110) tuned
         Serial.println("tuned");
@@ -627,7 +635,9 @@ void D_tune(){
         Serial.println("under");
         Serial.println(temp2);
         tune_status = -1;
-        int point = floor((temp2 - 135) * 6/9);
+        float delta_f = temp2 - 135;
+        int angle = (9-delta_f) * 40/9;
+        int point = floor(delta_f * 6/9);
         lcd.clear();
         lcd.setCursor(2, 0);
         lcd.write(4);
@@ -639,13 +649,15 @@ void D_tune(){
         lcd.print("D");
         lcd.setCursor(3+point, 0);
         lcd.write(3);
-        motor_tight();
+        motor_tight(angle);
       }
       else if(146 < temp2 && temp2 < 153){  // over
         Serial.println("over");
         Serial.println(temp2);
         tune_status = 1;
-        int point = floor((temp2 - 146) * 6/7);
+        float delta_f = temp2 - 146;
+        int angle = delta_f * 40/7;
+        int point = floor(delta_f * 6/7);
         lcd.clear();
         lcd.setCursor(2, 0);
         lcd.write(4);
@@ -657,7 +669,7 @@ void D_tune(){
         lcd.print("D");
         lcd.setCursor(10+point, 0);
         lcd.write(3);
-        motor_loose();
+        motor_loose(angle);
       }
       else if(144 <= temp2 && temp2 <= 146){  // if (145 < temp2 < 146) tuned
         Serial.println("tuned");
@@ -706,7 +718,9 @@ void G_tune(){
         Serial.println("under");
         Serial.println(temp2);
         tune_status = -1;
-        int point = floor((temp2 - 180) * 6/10);
+        float delta_f = temp2 - 180;
+        int angle = (9-delta_f) * 40/10;
+        int point = floor(delta_f * 6/10);
         lcd.clear();
         lcd.setCursor(2, 0);
         lcd.write(4);
@@ -718,13 +732,15 @@ void G_tune(){
         lcd.print("G");
         lcd.setCursor(3+point, 0);
         lcd.write(3);
-        motor_tight();
+        motor_tight(angle);
       }
       else if(196 < temp2 && temp2 < 205){  // over
         Serial.println("over");
         Serial.println(temp2);
         tune_status = 1;
-        int point = floor((temp2 - 196) * 6/9);
+        float delta_f = temp2 - 196;
+        int angle = delta_f * 40/9;
+        int point = floor(delta_f * 6/9);
         lcd.clear();
         lcd.setCursor(2, 0);
         lcd.write(4);
@@ -736,7 +752,7 @@ void G_tune(){
         lcd.print("G");
         lcd.setCursor(10+point, 0);
         lcd.write(3);
-        motor_loose();
+        motor_loose(angle);
       }
       else if(190 <= temp2 && temp2 <= 196){  // if (190 < temp2 < 195) tuned
         Serial.println("tuned");
@@ -785,7 +801,9 @@ void B_tune(){
         Serial.println("under");
         Serial.println(temp2);
         tune_status = -1;
-        int point = (235 < temp2 && temp2 < 241) ? floor((temp2 - 235) * 6/6) : floor((temp2 - 115) * 6/7);  
+        float delta_f = (235 < temp2 && temp2 < 241) ? (temp2 - 235) : (temp2 - 115);  
+        int angle = (235 < temp2 && temp2 < 241) ? floor((6-delta_f) * 40/6) : floor((7-delta_f) * 40/7);
+        int point = (235 < temp2 && temp2 < 241) ? floor(delta_f * 6/6) : floor(delta_f * 6/7);  
         lcd.clear();
         lcd.setCursor(2, 0);
         lcd.write(4);
@@ -797,13 +815,15 @@ void B_tune(){
         lcd.print("B");
         lcd.setCursor(3+point, 0);
         lcd.write(3);
-        motor_tight();
+        motor_tight(angle);
       }
       else if((243 < temp2 && temp2 < 250) || (124 < temp2 && temp2 < 130)){  // over
         Serial.println("over");
         Serial.println(temp2);
         tune_status = 1;
-        int point = (243 < temp2 && temp2 < 250) ? floor((temp2 - 243) * 6/7) : floor((temp2 - 124) * 6/6);
+        float delta_f = (243 < temp2 && temp2 < 250) ? (temp2 - 243) : (temp2 - 124);
+        int angle = (243 < temp2 && temp2 < 250) ? floor(delta_f * 40/7) : floor(delta_f * 40/6);
+        int point = (243 < temp2 && temp2 < 250) ? floor(delta_f * 6/7) : floor(delta_f * 6/6);
         lcd.clear();
         lcd.setCursor(2, 0);
         lcd.write(4);
@@ -815,7 +835,7 @@ void B_tune(){
         lcd.print("B");
         lcd.setCursor(10+point, 0);
         lcd.write(3);
-        motor_loose();
+        motor_loose(angle);
       }
       else if ((241 <= temp2 && temp2 <= 243) || (122 <= temp2 && temp2 <= 124)){  // if (242 < temp2 < 243) tuned
         Serial.println("tuned");
@@ -864,7 +884,9 @@ void Eh_tune(){
         Serial.println("under");
         Serial.println(temp2);
         tune_status = -1;
-        int point = (155 < temp2 && temp2 < 162) ? floor((temp2 - 155) * 6/7) : floor((temp2 - 325) * 6/7);
+        float delta_f = (155 < temp2 && temp2 < 162) ? (temp2 - 155) : (temp2 - 325);
+        int angle = (155 < temp2 && temp2 < 162) ? floor((7-delta_f) * 40/7) : floor((7-delta_f) * 40/7);
+        int point = (155 < temp2 && temp2 < 162) ? floor(delta_f * 6/7) : floor(delta_f * 6/7);
         lcd.clear();
         lcd.setCursor(2, 0);
         lcd.write(4);
@@ -876,13 +898,15 @@ void Eh_tune(){
         lcd.print("Eh");
         lcd.setCursor(3+point, 0);
         lcd.write(3);
-        motor_tight();
+        motor_tight(angle);
       }
       else if((164 < temp2 && temp2 < 170) || (334 < temp2 && temp2 < 340)){  // over
         Serial.println("over");
         Serial.println(temp2);
         tune_status = 1;
-        int point = (164 < temp2 && temp2 < 170) ? floor((temp2 - 164) * 6/6) : floor((temp2 - 334) * 6/6);
+        float delta_f = (164 < temp2 && temp2 < 170) ? (temp2 - 164) : (temp2 - 334);
+        int angle = (164 < temp2 && temp2 < 170) ? floor(delta_f * 40/6) : floor(delta_f * 40/6);
+        int point = (164 < temp2 && temp2 < 170) ? floor(delta_f * 6/6) : floor(delta_f * 6/6);
         lcd.clear();
         lcd.setCursor(2, 0);
         lcd.write(4);
@@ -894,7 +918,7 @@ void Eh_tune(){
         lcd.print("Eh");
         lcd.setCursor(10+point, 0);
         lcd.write(3);
-        motor_loose();
+        motor_loose(angle);
       }
       else if ((162 <= temp2 && temp2 <= 164) || (332 <= temp2 && temp2 <= 334)){  // if (162 < temp2 < 164) tuned
         Serial.println("tuned");
@@ -924,10 +948,18 @@ void Eh_tune(){
   }
 }
 
-void motor_tight(){ // when under tuned
-  Stepper.moveDegreesCW(40);
+void motor_tight(int angle_){ // when under tuned
+  Stepper.moveDegreesCW(angle_);
+  digitalWrite(6, LOW);
+  digitalWrite(7, LOW);
+  digitalWrite(8, LOW);
+  digitalWrite(9, LOW);
 }
 
-void motor_loose(){  // when over tuned
-  Stepper.moveDegreesCCW(40);
+void motor_loose(int angle_){  // when over tuned
+  Stepper.moveDegreesCCW(angle_);
+  digitalWrite(6, LOW);
+  digitalWrite(7, LOW);
+  digitalWrite(8, LOW);
+  digitalWrite(9, LOW);
 }
