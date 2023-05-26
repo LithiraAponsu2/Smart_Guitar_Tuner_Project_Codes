@@ -6,7 +6,7 @@
 CheapStepper Stepper(6, 7, 8, 9);
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-int x[250] = {0};  // store analog values
+int x[4000] = {0};  // store analog values
 int temp;
 float freq[4] = {};
 
@@ -342,30 +342,38 @@ void TunerPage(){
 void unWind() {
   Serial.println("CCW");
   Stepper.moveDegreesCCW(20);
+  digitalWrite(6, LOW);
+  digitalWrite(7, LOW);
+  digitalWrite(8, LOW);
+  digitalWrite(9, LOW);
 }
 
 void wind() {
   Serial.println("CW");
   Stepper.moveDegreesCW(20);
+  digitalWrite(6, LOW);
+  digitalWrite(7, LOW);
+  digitalWrite(8, LOW);
+  digitalWrite(9, LOW);
 }
 
 // frequency functions
 
 float get_freq(){
   float frequency = 0;
-  for (int i = 0; i < 1001; i++) {
+  for (int i = 0; i < 4001; i++) {
     x[i] = analogRead(26);
     delayMicroseconds(119);
   }
 
-  float y[250]; //array to store the moving average
-  for (int i = 0; i < 250; i++) {
+  float y[4000]; //array to store the moving average
+  for (int i = 0; i < 4000; i++) {
     y[i] = 0; //Initializing all zero
   }
   int l = 2; // 
   float mean; // store mean
   //Moving Average filter
-  for (int i = 0; i < 250; i++) //for loop for 250 times
+  for (int i = 0; i < 4000; i++) //for loop for 4000 times
   {
     for (int j = 0; j < l; j++) {
       if (i > j) {
@@ -376,33 +384,33 @@ float get_freq(){
 
   }
   //subtracting mean
-  for (int i = 0; i < 250; i++) {
-    y[i] = y[i] - mean / 250;
+  for (int i = 0; i < 4000; i++) {
+    y[i] = y[i] - mean / 4000;
   }
 
-  float blocks[500];
+  float blocks[1000];
   int no_block = 4;
 
   float ans_mean = 0;
   for (int j = 0; j < no_block; j++) {
-    for (int i = 0; i < 500; i++) {
-      blocks[i] = y[i + 500 * j];
+    for (int i = 0; i < 1000; i++) {
+      blocks[i] = y[i + 1000 * j];
     }
     //Energy of signal
     float energy = 0;
-    for (int i = 0; i < 500; i++) {
+    for (int i = 0; i < 1000; i++) {
       energy = energy + blocks[i] * blocks[i];
     }
 
     //ACF
-    float acf[500];
-    for (int i = 0; i < 500; i++) {
+    float acf[1000];
+    for (int i = 0; i < 1000; i++) {
       acf[i] = 0; //Initializing all zero
     }
 
-    for (int k = 0; k < 500; k++) {
-      for (int i = 0; i < 500; i++) {
-        if ((i + k) < 500)
+    for (int k = 0; k < 1000; k++) {
+      for (int i = 0; i < 1000; i++) {
+        if ((i + k) < 1000)
           acf[k] = acf[k] + blocks[i] * blocks[i + k];
       }
       acf[k] = acf[k] / energy;
