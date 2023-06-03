@@ -1,104 +1,127 @@
 
 
-int x[4000] = {0};  // store analog values
+int x[1000] = {0};  // store analog values
 int temp;
 float freq[4] = {};
 
-float get_freq(){
+float get_freq() {
   float frequency = 0;
-  for (int i = 0; i < 4001; i++) {
+  int totalSamples = 1000;
+  int blockSize = totalSamples / 2;
+
+  for (int i = 0; i < totalSamples; i++) {
     x[i] = analogRead(26);
     delayMicroseconds(119);
   }
 
-  float y[4000]; //array to store the moving average
-  for (int i = 0; i < 4000; i++) {
-    y[i] = 0; //Initializing all zero
+  float y[totalSamples - 1]; // array to store the moving average
+  for (int i = 0; i < totalSamples - 1; i++) {
+    y[i] = 0; // Initializing all zero
   }
-  int l = 2; // 
-  float mean; // store mean
-  //Moving Average filter
-  for (int i = 0; i < 4000; i++) //for loop for 4000 times
-  {
+
+  int l = 2;
+  float mean = 0; // store mean
+
+  // Moving Average filter
+  unsigned long start = millis(); // Start time
+  for (int i = 0; i < totalSamples - 1; i++) {
     for (int j = 0; j < l; j++) {
       if (i > j) {
         y[i] = y[i] + x[i - j];
       }
     }
     mean = mean + y[i];
-
   }
-  //subtracting mean
-  for (int i = 0; i < 4000; i++) {
-    y[i] = y[i] - mean / 4000;
+  unsigned long end = millis(); // End time
+  Serial.print("Moving Average time: ");
+  Serial.println(end - start);
+
+  // Subtracting mean
+  for (int i = 0; i < totalSamples - 1; i++) {
+    y[i] = y[i] - mean / (totalSamples - 1);
   }
 
-  float blocks[1000];
-  int no_block = 4;
+  float blocks[blockSize];
+  int no_block = 2;
 
   float ans_mean = 0;
   for (int j = 0; j < no_block; j++) {
-    for (int i = 0; i < 1000; i++) {
-      blocks[i] = y[i + 1000 * j];
+    for (int i = 0; i < blockSize; i++) {
+      blocks[i] = y[i + blockSize * j];
     }
-    //Energy of signal
+
+    // Energy of signal
     float energy = 0;
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < blockSize; i++) {
       energy = energy + blocks[i] * blocks[i];
     }
 
-    //ACF
-    float acf[1000];
-    for (int i = 0; i < 1000; i++) {
-      acf[i] = 0; //Initializing all zero
+    // ACF
+    float acf[blockSize];
+    for (int i = 0; i < blockSize; i++) {
+      acf[i] = 0; // Initializing all zero
     }
 
-    for (int k = 0; k < 1000; k++) {
-      for (int i = 0; i < 1000; i++) {
-        if ((i + k) < 1000)
+    start = millis(); // Start time
+    for (int k = 0; k < blockSize; k++) {
+      for (int i = 0; i < blockSize; i++) {
+        if ((i + k) < blockSize)
           acf[k] = acf[k] + blocks[i] * blocks[i + k];
       }
       acf[k] = acf[k] / energy;
     }
+    end = millis(); // End time
+    Serial.print("ACF time: ");
+    Serial.println(end - start);
 
-    //first zero crossing
+    // First zero crossing
     int zero;
-    for (int z = 0; z < 999; z++) {
+    start = millis(); // Start time
+    for (int z = 0; z < blockSize - 1; z++) {
       if (acf[z] * acf[z + 1] < 0) {
         zero = z;
         break;
       }
     }
-    //first maxima after z
+    end = millis(); // End time
+    Serial.print("Zero crossing time: ");
+    Serial.println(end - start);
+
+    // First maxima after zero
     int maxima = zero;
-    for (int k = zero + 1; k < 999; k++) {
+    start = millis(); // Start time
+    for (int k = zero + 1; k < blockSize - 1; k++) {
       if (acf[k] > acf[maxima]) {
         maxima = k;
       }
     }
+    end = millis(); // End time
+    Serial.print("Maxima time: ");
+    Serial.println(end - start);
+
     float numerator = 8000;
     float ans = numerator / maxima;
-    freq[j] = ans;  // store frequency in array
-    // ans_mean += ans;
-    // Serial.println(ans);
+    freq[j] = ans; // store frequency in array
   }
 
-  // Serial.print("final =");
-  // Serial.println(ans_mean / 4);
-
-  // if 2 or more frequencies same then give that value otherwise 0
-  
-  for (int i = 0; i < 3; i++) {
-    for (int j = i+1; j < 4; j++) {
+  // Finding the same frequencies
+  start = millis(); // Start time
+  for (int i = 0; i < 1; i++) {
+    for (int j = i + 1; j < 2; j++) {
       if (freq[i] == freq[j]) {
         frequency = freq[i];
         break;
       }
     }
   }
-  
+  end = millis(); // End time
+  Serial.print("Finding same frequencies time: ");
+  Serial.println(end - start);
+
   return frequency;
 }
+
+
 
 void setup() { // put your setup code here, to run once:
   Serial.begin(115200);
