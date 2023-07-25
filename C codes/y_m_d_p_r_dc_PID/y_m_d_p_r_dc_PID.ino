@@ -22,6 +22,14 @@ int screen = 1;  // store menu screen 1 - main menu, 2 - string menu, 3 - Semi a
 // dc motor
 const int A1A = 7; 
 const int A1B = 6;
+const int ENCA = 20;  // Yellow
+const int ENCB = 21;  // White
+
+int pos = 0;
+int speed_pwm = 200;
+long prevT = 0;
+float eprev = 0;
+float eintegral = 0;
 
 byte upArrow[] = {
   B00000,
@@ -95,6 +103,14 @@ void setup() {
   lcd.createChar(2, tuneUpArrow);
   lcd.createChar(3, tuneDownArrow);
   lcd.createChar(4, allLight);
+  pinMode(A1A, OUTPUT);
+  pinMode(A1B, OUTPUT);
+  pinMode(ENCA, INPUT);
+  pinMode(ENCB, INPUT);
+  attachInterrupt(digitalPinToInterrupt(ENCA), readEncoder, RISING);
+
+  // pinMode(8, OUTPUT);
+  // digitalWrite(A1A, HIGH);
 }
 
 void loop() {
@@ -991,4 +1007,89 @@ void motor_rot_wind_CCW(){  // only use delay for rotation control
   delay(50);  // ~ 45 degrees
   digitalWrite(A1A, LOW);
   digitalWrite(A1B, LOW);
+}
+
+// PID motor control
+void readEncoder() {
+  int b = digitalRead(ENCB);
+  if (b>0) {
+    pos++;
+  }
+  else {
+    pos--;
+  }
+}
+
+void setMotor(int dir, int pwmVal) {
+  if (dir == 1){
+    analogWrite(A1A, pwmVal);
+    digitalWrite(A1B, LOW);
+  }
+  else if (dir == -1) {
+    analogWrite(A1B, pwmVal);
+    digitalWrite(A1A, LOW);
+  }
+  else {
+    digitalWrite(A1A, LOW);
+    digitalWrite(A1B, LOW);
+  }
+}
+
+void PID_motor(int target){
+
+  // PID constants
+  float kp = 1;
+  float kd = 0.025;
+  float ki = 0;
+
+  
+  // time difference
+  long currT = micros();
+
+  float deltaT = ((float) (currT-prevT)/1.0e6);
+  prevT = currT;
+
+  // error
+  int e = -pos + target;
+
+  // derivative
+  float dedt = (e-eprev)/(deltaT);
+
+  // integral
+  eintegral = eintegral + e*deltaT;
+
+  // control signal
+  float u = kp*e + kd*dedt + ki*eintegral;
+
+  // motor power
+  float pwr = fabs(u);
+  
+  if(pwr>255){
+    pwr = 255;
+  }
+
+  if(pwr<70){
+    pwr = 70;
+  }
+
+  // motor direction
+  int dir = 1;
+  if(u<0){
+    dir = -1;
+  }
+
+  // signal the motor
+  setMotor(dir, pwr);
+
+  // store prev error
+  eprev = e;
+
+  // Serial.print(target);
+  // Serial.print(" ");
+  // Serial.print(pos);
+  // Serial.println();
+  // Serial.println(pwr);
+  
+
+  
 }
