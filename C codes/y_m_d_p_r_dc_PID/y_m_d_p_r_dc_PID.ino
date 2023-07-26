@@ -114,6 +114,7 @@ void setup() {
 }
 
 void loop() {
+  // PID_motor(1200);
   if (screen == 1) {
     // Menu screen
     if (!digitalRead(downButton)){
@@ -510,7 +511,10 @@ void El_tune(){
         lcd.print("El");
         lcd.setCursor(3+point, 0);
         lcd.write(3);
-        motor_tight(angle);
+        // motor_tight(angle);
+        // PID_motor(angle+1000);
+        // controlMotor(20, 80);
+        motorRotateDelay(1, 80, 1000);
       }
       else if(83 < temp2 && temp2 < 93){  // over
         Serial.println("over");
@@ -1035,61 +1039,128 @@ void setMotor(int dir, int pwmVal) {
   }
 }
 
-void PID_motor(int target){
-
-  // PID constants
-  float kp = 1;
-  float kd = 0.025;
-  float ki = 0;
-
-  
-  // time difference
-  long currT = micros();
-
-  float deltaT = ((float) (currT-prevT)/1.0e6);
-  prevT = currT;
-
-  // error
-  int e = -pos + target;
-
-  // derivative
-  float dedt = (e-eprev)/(deltaT);
-
-  // integral
-  eintegral = eintegral + e*deltaT;
-
-  // control signal
-  float u = kp*e + kd*dedt + ki*eintegral;
-
-  // motor power
-  float pwr = fabs(u);
-  
-  if(pwr>255){
-    pwr = 255;
+// delay based motor rotate
+void motorRotateDelay(int dir, int time){
+  if (dir == 1){
+    // analogWrite(A1A, pwmVal);
+    digitalWrite(A1A, HIGH);
+    digitalWrite(A1B, LOW);
+    delay(time);
+    digitalWrite(A1A, LOW);
   }
-
-  if(pwr<70){
-    pwr = 70;
+  else if (dir == -1) {
+    // analogWrite(A1B, pwmVal);
+    digitalWrite(A1B, HIGH);
+    digitalWrite(A1A, LOW);
+    delay(time);
+    digitalWrite(A1B, LOW);
   }
-
-  // motor direction
-  int dir = 1;
-  if(u<0){
-    dir = -1;
+  else {
+    digitalWrite(A1A, LOW);
+    digitalWrite(A1B, LOW);
   }
-
-  // signal the motor
-  setMotor(dir, pwr);
-
-  // store prev error
-  eprev = e;
-
-  // Serial.print(target);
-  // Serial.print(" ");
-  // Serial.print(pos);
-  // Serial.println();
-  // Serial.println(pwr);
-  
-
-  
 }
+
+
+// void PID_motor(int target){
+
+//   while (true){
+//   static int pidCount = 0;
+//   pidCount++;
+  
+//   // Rest of the PID_motor code...
+  
+//   Serial.print("PID Count: ");
+//   Serial.println(pidCount);
+
+//   // PID constants
+//   float kp = 1;
+//   float kd = 0.025;
+//   float ki = 0;
+
+  
+//   // time difference
+//   long currT = micros();
+
+//   float deltaT = ((float) (currT-prevT)/1.0e6);
+//   prevT = currT;
+
+//   // error
+//   int e = pos - target;
+
+//   // derivative
+//   float dedt = (e-eprev)/(deltaT);
+
+//   // integral
+//   // eintegral = eintegral + e*deltaT;
+
+//   // control signal
+//   float u = kp*e + kd*dedt;
+
+//   // motor power
+//   float pwr = fabs(u);
+  
+//   if(pwr>255){
+//     pwr = 255;
+//   }
+
+//   if(pwr<70){
+//     pwr = 70;
+//   }
+
+//   // motor direction
+//   int dir = 1;
+//   if(u<0){
+//     dir = -1;
+//   }
+
+//   // signal the motor
+//   setMotor(dir, pwr);
+
+//   // store prev error
+//   eprev = e;
+
+//   Serial.println("---------------");
+//   Serial.print(target);
+//   Serial.print(" ");
+//   Serial.print(pos);
+//   Serial.println();
+//   Serial.println(pwr);}
+  
+
+  
+// }
+
+// // Motor control to reach the target position (angle or steps)
+// void controlMotor(int target, int pwmPower) {
+//   // Motor constants
+//   int kp = 1;
+
+//   // Motor direction
+//   int dir = 1;
+//   if (target < pos) {
+//     dir = -1;
+//   }
+
+//   // Move towards the target position
+//   while (pos != target) {
+//     int error = target - pos;
+//     int u = kp * error;
+
+//     // Cap the control signal to stay within pwmPower range
+//     if (u > pwmPower) {
+//       u = pwmPower;
+//     } else if (u < -pwmPower) {
+//       u = -pwmPower;
+//     }
+
+//     // Set motor power and direction
+//     setMotor(dir, abs(u));
+
+//     // Read the encoder for position update
+//     readEncoder();
+//   }
+
+//   // Stop the motor after reaching the target
+//   setMotor(0, 0);
+// }

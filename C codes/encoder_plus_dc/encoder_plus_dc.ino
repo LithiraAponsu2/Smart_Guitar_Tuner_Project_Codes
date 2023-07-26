@@ -1,8 +1,8 @@
 // dc motor
-const int A1A = 3; 
-const int A1B = 5;
-const int ENCA = 2;  // Yellow
-const int ENCB = 7;  // White
+const int A1A = 7; 
+const int A1B = 6;
+const int ENCA = 20;  // Yellow
+const int ENCB = 21;  // White
 
 int pos = 0;
 int speed_pwm = 200;
@@ -111,7 +111,7 @@ void PID_motor(int target){
   // PID constants
   float kp = 1;
   float kd = 0.025;
-  float ki = 0;
+  // float ki = 0;
 
   
   // time difference
@@ -121,16 +121,17 @@ void PID_motor(int target){
   prevT = currT;
 
   // error
-  int e = -pos + target;
+  int e = pos - target;
 
   // derivative
   float dedt = (e-eprev)/(deltaT);
 
   // integral
-  eintegral = eintegral + e*deltaT;
+  // eintegral = eintegral + e*deltaT;
 
   // control signal
-  float u = kp*e + kd*dedt + ki*eintegral;
+  // float u = kp*e + kd*dedt + ki*eintegral;
+  float u = kp*e + kd*dedt;
 
   // motor power
   float pwr = fabs(u);
