@@ -11,10 +11,11 @@
 // CheapStepper Stepper(6, 7, 8, 9);
 // LiquidCrystal_I2C lcd(0x27, 16, 2);
 
-int x[4000] = {0};  // store analog values
+int x[1000] = {0};  // store analog values
 int temp;
 float freq[4] = {};
 
+int micPin = 26;
 int buzzer = 16;
 int upButton = 10;
 int downButton = 11;
@@ -497,7 +498,7 @@ void wind() {
 // float get_freq(){
 //   float frequency = 0;
 //   for (int i = 0; i < 4001; i++) {
-//     x[i] = analogRead(26);
+//     x[i] = analogRead(micPin);
 //     delayMicroseconds(119);
 //   }
 
@@ -609,7 +610,7 @@ float get_freq() {
   float mean = 0; // store mean
 
   // Moving Average filter
-  unsigned long start = millis(); // Start time
+  // unsigned long start = millis(); // Start time
   for (int i = 0; i < totalSamples - 1; i++) {
     for (int j = 0; j < l; j++) {
       if (i > j) {
@@ -618,9 +619,9 @@ float get_freq() {
     }
     mean = mean + y[i];
   }
-  unsigned long end = millis(); // End time
-  Serial.print("Moving Average time: ");
-  Serial.println(end - start);
+  // unsigned long end = millis(); // End time
+  // Serial.print("Moving Average time: ");
+  // Serial.println(end - start);
 
   // Subtracting mean
   for (int i = 0; i < totalSamples - 1; i++) {
@@ -648,7 +649,7 @@ float get_freq() {
       acf[i] = 0; // Initializing all zero
     }
 
-    start = millis(); // Start time
+    // start = millis(); // Start time
     for (int k = 0; k < blockSize; k++) {
       for (int i = 0; i < blockSize; i++) {
         if ((i + k) < blockSize)
@@ -656,34 +657,34 @@ float get_freq() {
       }
       acf[k] = acf[k] / energy;
     }
-    end = millis(); // End time
-    Serial.print("ACF time: ");
-    Serial.println(end - start);
+    // end = millis(); // End time
+    // Serial.print("ACF time: ");
+    // Serial.println(end - start);
 
     // First zero crossing
     int zero;
-    start = millis(); // Start time
+    // start = millis(); // Start time
     for (int z = 0; z < blockSize - 1; z++) {
       if (acf[z] * acf[z + 1] < 0) {
         zero = z;
         break;
       }
     }
-    end = millis(); // End time
-    Serial.print("Zero crossing time: ");
-    Serial.println(end - start);
+    // end = millis(); // End time
+    // Serial.print("Zero crossing time: ");
+    // Serial.println(end - start);
 
     // First maxima after zero
     int maxima = zero;
-    start = millis(); // Start time
+    // start = millis(); // Start time
     for (int k = zero + 1; k < blockSize - 1; k++) {
       if (acf[k] > acf[maxima]) {
         maxima = k;
       }
     }
-    end = millis(); // End time
-    Serial.print("Maxima time: ");
-    Serial.println(end - start);
+    // end = millis(); // End time
+    // Serial.print("Maxima time: ");
+    // Serial.println(end - start);
 
     float numerator = 8000;
     float ans = numerator / maxima;
@@ -691,7 +692,7 @@ float get_freq() {
   }
 
   // Finding the same frequencies
-  start = millis(); // Start time
+  // start = millis(); // Start time
   for (int i = 0; i < 1; i++) {
     for (int j = i + 1; j < 2; j++) {
       if (freq[i] == freq[j]) {
@@ -700,9 +701,9 @@ float get_freq() {
       }
     }
   }
-  end = millis(); // End time
-  Serial.print("Finding same frequencies time: ");
-  Serial.println(end - start);
+  // end = millis(); // End time
+  // Serial.print("Finding same frequencies time: ");
+  // Serial.println(end - start);
 
   return frequency;
 }
@@ -713,7 +714,7 @@ void El_tune(){
   int tune_status = 0;
   
   while (temp3 == 0){
-    temp = analogRead(26);
+    temp = analogRead(micPin);
     if (!digitalRead(backButton)){
       screen = 2;
       updateTuneMenu();
@@ -879,7 +880,7 @@ void A_tune(){
   float temp2;
   int tune_status = 0;
   while (temp3 == 0){
-    temp = analogRead(26);
+    temp = analogRead(micPin);
     if (!digitalRead(backButton)){
       screen = 2;
       updateTuneMenu();
@@ -1036,7 +1037,7 @@ void D_tune(){
   float temp2;
   int tune_status = 0;
   while (temp3 == 0){
-    temp = analogRead(26);
+    temp = analogRead(micPin);
     if (!digitalRead(backButton)){
       screen = 2;
       updateTuneMenu();
@@ -1193,7 +1194,7 @@ void G_tune(){
   float temp2;
   int tune_status = 0;
   while (temp3 == 0){
-    temp = analogRead(26);
+    temp = analogRead(micPin);
     if (!digitalRead(backButton)){
       screen = 2;
       updateTuneMenu();
@@ -1350,7 +1351,7 @@ void B_tune(){
   float temp2;
   int tune_status = 0;
   while (temp3 == 0){
-    temp = analogRead(26);
+    temp = analogRead(micPin);
     if (!digitalRead(backButton)){
       screen = 2;
       updateTuneMenu();
@@ -1507,7 +1508,7 @@ void Eh_tune(){
   float temp2;
   int tune_status = 0;
   while (temp3 == 0){
-    temp = analogRead(26);
+    temp = analogRead(micPin);
     if (!digitalRead(backButton)){
       screen = 2;
       updateTuneMenu();
