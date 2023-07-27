@@ -726,7 +726,7 @@ void El_tune(){
       temp2 = get_freq();
       // display.fillTriangle(33, 12, 25, 4, 41, 4, WHITE);
       display.display();
-      if(70 < temp2 && temp2 < 80){  // under
+      if(60 < temp2 && temp2 < 81){  // under
         Serial.println("under");
         Serial.println(temp2);
         tune_status = -1;
@@ -821,7 +821,7 @@ void El_tune(){
         // motor_loose(angle);
         motorRotateDelay(-1, 1000);
       }
-      else if(80 <= temp2 && temp2 <= 83){  // if (80 < temp2 < 82) tuned
+      else if(81 <= temp2 && temp2 <= 83){  // if (80 < temp2 < 82) tuned
         Serial.println("tuned");
         Serial.println(temp2);
         tune_status = 0;
@@ -890,7 +890,7 @@ void A_tune(){
     }
     if (temp > 2500) {
       temp2 = get_freq();
-      if(100 < temp2 && temp2 < 107){  // under
+      if(94 < temp2 && temp2 < 109){  // under
         Serial.println("under");
         Serial.println(temp2);
         tune_status = -1;
@@ -935,7 +935,7 @@ void A_tune(){
         // motor_tight(angle);
         motorRotateDelay(1, 1000);
       }
-      else if(111 < temp2 && temp2 < 114){  // over
+      else if(112 < temp2 && temp2 < 120){  // over
         Serial.println("over");
         Serial.println(temp2);
         tune_status = 1;
@@ -980,7 +980,7 @@ void A_tune(){
         // motor_loose(angle);
         motorRotateDelay(-1, 1000);
       }
-      else if(107 <= temp2 && temp2 <= 111){  // if (108 < temp2 < 110) tuned
+      else if(109 <= temp2 && temp2 <= 112){  // if (108 < temp2 < 110) tuned
         Serial.println("tuned");
         Serial.println(temp2);
         tune_status = 0;
@@ -1047,7 +1047,7 @@ void D_tune(){
     }
     if (temp > 2500) {
       temp2 = get_freq();
-      if(135 < temp2 && temp2 < 144){  // under
+      if(129 < temp2 && temp2 < 144){  // under
         Serial.println("under");
         Serial.println(temp2);
         tune_status = -1;
@@ -1204,7 +1204,7 @@ void G_tune(){
     }
     if (temp > 2500) {
       temp2 = get_freq();
-      if(180 <= temp2 && temp2 <= 190){  // under
+      if(170 <= temp2 && temp2 <= 193){  // under
         Serial.println("under");
         Serial.println(temp2);
         tune_status = -1;
@@ -1249,7 +1249,7 @@ void G_tune(){
         // motor_tight(angle);
         motorRotateDelay(1, 1000);
       }
-      else if(196 < temp2 && temp2 < 205){  // over
+      else if(197 < temp2 && temp2 < 220){  // over
         Serial.println("over");
         Serial.println(temp2);
         tune_status = 1;
@@ -1361,7 +1361,7 @@ void B_tune(){
     }
     if (temp > 2500) {
       temp2 = get_freq();
-      if((235 < temp2 && temp2 < 241) || (115 < temp2 && temp2 < 122)){  // under
+      if((216 < temp2 && temp2 < 241) || (115 < temp2 && temp2 < 122)){  // under
         Serial.println("under");
         Serial.println(temp2);
         tune_status = -1;
@@ -1406,7 +1406,7 @@ void B_tune(){
         // motor_tight(angle);
         motorRotateDelay(1, 1000);
       }
-      else if((243 < temp2 && temp2 < 250) || (124 < temp2 && temp2 < 130)){  // over
+      else if((251 < temp2 && temp2 < 268) || (124 < temp2 && temp2 < 130)){  // over
         Serial.println("over");
         Serial.println(temp2);
         tune_status = 1;
@@ -1451,7 +1451,7 @@ void B_tune(){
         // motor_loose(angle);
         motorRotateDelay(-1, 1000);
       }
-      else if ((241 <= temp2 && temp2 <= 243) || (122 <= temp2 && temp2 <= 124)){  // if (242 < temp2 < 243) tuned
+      else if ((241 <= temp2 && temp2 <= 251) || (122 <= temp2 && temp2 <= 124)){  // if (242 < temp2 < 243) tuned
         Serial.println("tuned");
         Serial.println(temp2);
         tune_status = 0;
@@ -1518,7 +1518,7 @@ void Eh_tune(){
     }
     if (temp > 2500) {
       temp2 = get_freq();
-      if((155 < temp2 && temp2 < 162) || (325 < temp2 && temp2 < 332)){  // under
+      if((145 < temp2 && temp2 < 162) || (290 < temp2 && temp2 < 331)){  // under
         Serial.println("under");
         Serial.println(temp2);
         tune_status = -1;
@@ -1563,7 +1563,7 @@ void Eh_tune(){
         // motor_tight(angle);
         motorRotateDelay(1, 1000);
       }
-      else if((164 < temp2 && temp2 < 170) || (334 < temp2 && temp2 < 340)){  // over
+      else if((164 < temp2 && temp2 < 170) || (334 < temp2 && temp2 < 345)){  // over
         Serial.println("over");
         Serial.println(temp2);
         tune_status = 1;
