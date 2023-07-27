@@ -1,0 +1,1394 @@
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+#include <CheapStepper.h>
+#include <math.h>
+
+#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+int x[1000] = {0};  // store analog values
+int temp;
+float freq[4] = {};
+
+int micPin = 26;
+int buzzer = 16;
+int upButton = 10;
+int downButton = 11;
+int selectButton = 12;  
+int backButton = 13;  
+int menu = 1;  // store pointed menu item
+int tune_menu = 1;  // store pointed tune string 1-El, 2-A, 3-D, 4-G, 5-B, 6-Eh
+int screen = 1;  // store menu screen 1 - main menu, 2 - string menu, 3 - Semi Violin page, 4 - wind unwind page
+
+// dc motor
+const int A1A = 7; 
+const int A1B = 6;
+const int ENCA = 20;  // Yellow
+const int ENCB = 21;  // White
+
+int pos = 0;
+int speed_pwm = 200;
+long prevT = 0;
+float eprev = 0;
+float eintegral = 0;
+
+Adafruit_SSD1306 display = Adafruit_SSD1306(128, 32, &Wire);
+
+void setup() {
+  Serial.begin(115200);
+  analogReadResolution(12);
+  // lcd.begin();
+  // lcd.backlight();
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  Serial.println("OLED intialized");
+
+  display.setTextSize(2);
+  display.setTextColor(WHITE);
+  // Stepper.setRpm(17);
+  pinMode(upButton, INPUT_PULLUP);
+  pinMode(downButton, INPUT_PULLUP);
+  pinMode(selectButton, INPUT_PULLUP);
+  pinMode(backButton, INPUT_PULLUP);
+  updateTuneMenu();
+  updateMenu();
+  pinMode(A1A, OUTPUT);
+  pinMode(A1B, OUTPUT);
+  pinMode(ENCA, INPUT);
+  pinMode(ENCB, INPUT);
+  attachInterrupt(digitalPinToInterrupt(ENCA), readEncoder, RISING);
+}
+
+void loop() {
+  // PID_motor(1200);
+  if (screen == 1) {
+    // Menu screen
+    if (!digitalRead(downButton)){
+      menu++;
+      updateMenu();
+      delay(100);
+      while (!digitalRead(downButton));  // avoid looping
+    }
+    if (!digitalRead(upButton)){
+      menu--;
+      updateMenu();
+      delay(100);
+      while(!digitalRead(upButton));
+    }
+    if (!digitalRead(selectButton)){
+      executeActionMain();
+      if (menu == 3) {
+        screen = 2; // Set screen to TuneMenu when executing action3
+      } else {
+        updateMenu();
+      }
+      delay(100);
+      while (!digitalRead(selectButton));
+    }
+  }
+  if (screen == 2) {
+    // TuneMenu screen
+    if (!digitalRead(downButton)){
+      tune_menu++;             
+      updateTuneMenu();
+      delay(100);
+      while (!digitalRead(downButton));  // avoid looping
+    }
+    if (!digitalRead(upButton)){
+      tune_menu--;
+      updateTuneMenu();
+      delay(100);
+      while(!digitalRead(upButton));
+    }
+    if (!digitalRead(selectButton)){
+      screen = 3;
+      TunerPage();
+      delay(100);
+      while (!digitalRead(selectButton));
+    }
+    if (!digitalRead(backButton)){
+      screen = 1;
+      updateMenu();
+      delay(100);
+      while (!digitalRead(backButton));
+    }
+  }
+  if (screen == 3) {
+    // TuneMenu screen
+    if (!digitalRead(backButton)){
+      screen = 2;
+      updateTuneMenu();
+      delay(100);
+      while (!digitalRead(backButton));
+    }
+  }
+  if (screen == 4) {
+    windUnwindPage();
+    delay(100);
+    while(true) {
+      if (!digitalRead(downButton)){
+        unWind();
+      }
+      if (!digitalRead(upButton)){
+        wind();
+      }
+      if (!digitalRead(backButton)){
+        screen = 1;
+        updateMenu();
+        delay(100);
+        while (!digitalRead(backButton));
+        break;
+      }
+    }
+  }
+}
+
+
+void updateMenu() {
+  switch (menu) {
+    case 0:
+      menu = 1;
+      break;
+    case 1:
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println(">Wind");
+      display.setCursor(0, 17);
+      display.println(" Violin");
+      display.display();
+      break;
+    case 2:
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println(" Wind");
+      display.setCursor(0, 17);
+      display.println(">Violin");
+      display.display();
+      break;
+    case 3:
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println(">Acoustic");
+      display.setCursor(0, 17);
+      display.println(" Ukulele");
+      display.display();
+      break;
+    case 4:
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println(" Acoustic");
+      display.setCursor(0, 17);
+      display.println(">Ukulele");
+      display.display();
+      break;
+    case 5:
+      menu = 4;
+      break;
+  }
+}
+
+void updateTuneMenu() {
+  switch (tune_menu) {
+    case 0:
+      tune_menu = 1;
+      break;
+    case 1:
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println(">El A D G  B Eh");
+      display.display();
+      break;
+    case 2:
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println(" El>A D G  B Eh");
+      display.display();
+      break;
+    case 3:
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println(" El A>D G  B Eh");
+      display.display();
+      break;
+    case 4:
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println(" El A D>G  B Eh");
+      display.display();
+      break;
+    case 5:
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println(" El A D G >B Eh");
+      display.display();
+      break;
+    case 6:
+      display.clearDisplay();
+      display.setCursor(0, 0);
+      display.println(" El A D G  B>Eh");
+      display.display();
+      break;
+    case 7:
+      tune_menu = 6;
+      break;
+    default:
+      tune_menu = 1;  // Set tune_menu to 1 by default
+      break;
+  }
+}
+
+void windUnwindPage() {
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("Wind  : ");
+  display.drawTriangle(104, 12, 112, 4, 96, 4, WHITE);
+  display.setCursor(0, 17);
+  display.println("Unwind: ");
+  display.drawTriangle(104, 20, 112, 28, 96, 28, WHITE);
+  display.display();
+
+}
+
+void executeActionMain() {
+  switch (menu) {
+    case 1:
+      action1();
+      break;
+    case 2:
+      action2();
+      break;
+    case 3:
+      action3();
+      break;
+    case 4:
+      action4();
+      break;
+  }
+}
+
+// actions of main menu
+void action1() {
+  display.clearDisplay();
+  screen = 4;
+  windUnwindPage();
+}
+void action2() {
+  display.clearDisplay();
+  display.println(">Violin do");
+  delay(1500);
+}
+void action3() {  // Semi-Auto
+  display.clearDisplay();
+  screen = 2;
+  updateTuneMenu();
+}
+void action4() {
+  display.clearDisplay();
+  display.println(">Ukulele");
+  delay(1500);
+}
+
+// tuner page 
+void TunerPage(){
+  display.clearDisplay();
+
+  display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+  display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+  display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+  display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+  display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+  display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+  
+  display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+  display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+  display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+  display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+  display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+  display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+  display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+  display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+  display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+  display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+  display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+
+  display.setCursor(0, 0);
+  switch (tune_menu) {
+    case 1:
+      display.print("El");
+      display.display();
+      El_tune();
+      break;
+    case 2:
+      display.print("A");
+      display.display();
+      A_tune();
+      break;
+    case 3:
+      display.print("D");
+      display.display();
+      D_tune();
+      break;
+    case 4:
+      display.print("G");
+      display.display();
+      G_tune();
+      break;
+    case 5:
+      display.print("B");
+      display.display();
+      B_tune();
+      break;
+    case 6:
+      display.print("Eh");
+      display.display();
+      Eh_tune();
+      break;
+  }
+}
+
+void unWind() {
+  Serial.println("CCW");
+  motor_rot_wind_CCW();
+}
+
+void wind() {
+  Serial.println("CW");
+  motor_rot_wind_CW();
+}
+
+// frequency functions
+
+float get_freq() {
+  float frequency = 0;
+  int totalSamples = 1000;
+  int blockSize = totalSamples / 2;
+
+  for (int i = 0; i < totalSamples; i++) {
+    x[i] = analogRead(micPin);
+    delayMicroseconds(119);
+  }
+
+  float y[totalSamples - 1]; // array to store the moving average
+  for (int i = 0; i < totalSamples - 1; i++) {
+    y[i] = 0; // Initializing all zero
+  }
+
+  int l = 2;
+  float mean = 0; // store mean
+
+  // Moving Average filter
+  // unsigned long start = millis(); // Start time
+  for (int i = 0; i < totalSamples - 1; i++) {
+    for (int j = 0; j < l; j++) {
+      if (i > j) {
+        y[i] = y[i] + x[i - j];
+      }
+    }
+    mean = mean + y[i];
+  }
+  // unsigned long end = millis(); // End time
+  // Serial.print("Moving Average time: ");
+  // Serial.println(end - start);
+
+  // Subtracting mean
+  for (int i = 0; i < totalSamples - 1; i++) {
+    y[i] = y[i] - mean / (totalSamples - 1);
+  }
+
+  float blocks[blockSize];
+  int no_block = 2;
+
+  float ans_mean = 0;
+  for (int j = 0; j < no_block; j++) {
+    for (int i = 0; i < blockSize; i++) {
+      blocks[i] = y[i + blockSize * j];
+    }
+
+    // Energy of signal
+    float energy = 0;
+    for (int i = 0; i < blockSize; i++) {
+      energy = energy + blocks[i] * blocks[i];
+    }
+
+    // ACF
+    float acf[blockSize];
+    for (int i = 0; i < blockSize; i++) {
+      acf[i] = 0; // Initializing all zero
+    }
+
+    // start = millis(); // Start time
+    for (int k = 0; k < blockSize; k++) {
+      for (int i = 0; i < blockSize; i++) {
+        if ((i + k) < blockSize)
+          acf[k] = acf[k] + blocks[i] * blocks[i + k];
+      }
+      acf[k] = acf[k] / energy;
+    }
+    // end = millis(); // End time
+    // Serial.print("ACF time: ");
+    // Serial.println(end - start);
+
+    // First zero crossing
+    int zero;
+    // start = millis(); // Start time
+    for (int z = 0; z < blockSize - 1; z++) {
+      if (acf[z] * acf[z + 1] < 0) {
+        zero = z;
+        break;
+      }
+    }
+    // end = millis(); // End time
+    // Serial.print("Zero crossing time: ");
+    // Serial.println(end - start);
+
+    // First maxima after zero
+    int maxima = zero;
+    // start = millis(); // Start time
+    for (int k = zero + 1; k < blockSize - 1; k++) {
+      if (acf[k] > acf[maxima]) {
+        maxima = k;
+      }
+    }
+    // end = millis(); // End time
+    // Serial.print("Maxima time: ");
+    // Serial.println(end - start);
+
+    float numerator = 8000;
+    float ans = numerator / maxima;
+    freq[j] = ans; // store frequency in array
+  }
+
+  // Finding the same frequencies
+  // start = millis(); // Start time
+  for (int i = 0; i < 1; i++) {
+    for (int j = i + 1; j < 2; j++) {
+      if (freq[i] == freq[j]) {
+        frequency = freq[i];
+        break;
+      }
+    }
+  }
+  // end = millis(); // End time
+  // Serial.print("Finding same frequencies time: ");
+  // Serial.println(end - start);
+
+  return frequency;
+}
+
+void El_tune(){
+  int temp3 = 0;
+  float temp2;
+  int tune_status = 0;
+  
+  while (temp3 == 0){
+    temp = analogRead(micPin);
+    if (!digitalRead(backButton)){
+      screen = 2;
+      updateTuneMenu();
+      delay(100);
+      while (!digitalRead(backButton));
+      break;
+    }
+    if (temp > 2500) {
+      temp2 = get_freq();
+      // display.fillTriangle(33, 12, 25, 4, 41, 4, WHITE);
+      display.display();
+      if(60 < temp2 && temp2 < 81){  // under
+        Serial.println("under");
+        Serial.println(temp2);
+        tune_status = -1;
+        float delta_f = temp2 - 70;
+        int angle = (10-delta_f) * 40/10;
+        // int point = floor(delta_f * 6/10);
+        int point = floor(delta_f * 32/10);  // 40-8
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("El");
+        display.fillTriangle(33+point, 12, 25+point, 4, 41+point, 4, WHITE);
+        display.display();
+        motorRotateDelay(1, 1000);
+      }
+      else if(83 < temp2 && temp2 < 93){  // over
+        Serial.println("over");
+        Serial.println(temp2);
+        tune_status = 1;
+        float delta_f = temp2 - 83;
+        int angle = delta_f * 40/10;
+        // int point = floor(delta_f * 6/10);
+        int point = floor(delta_f * 32/10);display.clearDisplay();
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("El");
+        display.fillTriangle(85+point, 12, 77+point, 4, 93+point, 4, WHITE);
+        display.display();
+        motorRotateDelay(-1, 1000);
+      }
+      else if(81 <= temp2 && temp2 <= 83){  // if (80 < temp2 < 82) tuned
+        Serial.println("tuned");
+        Serial.println(temp2);
+        tune_status = 0;
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("El");
+        display.fillTriangle(75, 16, 67, 8, 84, 8, WHITE);
+        display.display();
+        tone(buzzer, 450);
+        delay(500);
+        noTone(buzzer);
+        temp3 == 1;
+      }
+      else{
+        Serial.println("Stray");
+        Serial.println(temp2);
+      }
+    }
+  }
+  
+  
+}
+
+void A_tune(){
+  int temp3 = 0;
+  float temp2;
+  int tune_status = 0;
+  while (temp3 == 0){
+    temp = analogRead(micPin);
+    if (!digitalRead(backButton)){
+      screen = 2;
+      updateTuneMenu();
+      delay(100);
+      while (!digitalRead(backButton));
+      break;
+    }
+    if (temp > 2500) {
+      temp2 = get_freq();
+      if(94 < temp2 && temp2 < 109){  // under
+        Serial.println("under");
+        Serial.println(temp2);
+        tune_status = -1;
+        float delta_f = temp2 - 100;
+        int angle = (7-delta_f) * 40/7;
+        int point = floor(delta_f * 6/7);
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("A");
+        display.fillTriangle(33+point, 12, 25+point, 4, 41+point, 4, WHITE);
+        display.display();
+        // motor_tight(angle);
+        motorRotateDelay(1, 1000);
+      }
+      else if(112 < temp2 && temp2 < 120){  // over
+        Serial.println("over");
+        Serial.println(temp2);
+        tune_status = 1;
+        float delta_f = temp2 - 111;
+        int angle = delta_f * 40/3;
+        int point = floor(delta_f * 6/3);
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("A");
+        display.fillTriangle(85+point, 12, 77+point, 4, 93+point, 4, WHITE);
+        display.display();
+        // motor_loose(angle);
+        motorRotateDelay(-1, 1000);
+      }
+      else if(109 <= temp2 && temp2 <= 112){  // if (108 < temp2 < 110) tuned
+        Serial.println("tuned");
+        Serial.println(temp2);
+        tune_status = 0;
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("A");
+        display.fillTriangle(75, 16, 67, 8, 84, 8, WHITE);
+        display.display();
+        tone(buzzer, 450);
+        delay(500);
+        noTone(buzzer);
+        temp3 == 1;
+      }
+      else{
+        Serial.println("Stray");
+        Serial.println(temp2);
+      }
+    }
+  }
+}
+
+void D_tune(){
+  int temp3 = 0;
+  float temp2;
+  int tune_status = 0;
+  while (temp3 == 0){
+    temp = analogRead(micPin);
+    if (!digitalRead(backButton)){
+      screen = 2;
+      updateTuneMenu();
+      delay(100);
+      while (!digitalRead(backButton));
+      break;
+    }
+    if (temp > 2500) {
+      temp2 = get_freq();
+      if(129 < temp2 && temp2 < 144){  // under
+        Serial.println("under");
+        Serial.println(temp2);
+        tune_status = -1;
+        float delta_f = temp2 - 135;
+        int angle = (9-delta_f) * 40/9;
+        int point = floor(delta_f * 6/9);
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("D");
+        display.fillTriangle(33+point, 12, 25+point, 4, 41+point, 4, WHITE);
+        display.display();
+        // motor_tight(angle);
+        motorRotateDelay(1, 1000);
+      }
+      else if(146 < temp2 && temp2 < 153){  // over
+        Serial.println("over");
+        Serial.println(temp2);
+        tune_status = 1;
+        float delta_f = temp2 - 146;
+        int angle = delta_f * 40/7;
+        int point = floor(delta_f * 6/7);
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("D");
+        display.fillTriangle(85+point, 12, 77+point, 4, 93+point, 4, WHITE);
+        display.display();
+        // motor_loose(angle);
+        motorRotateDelay(-1, 1000);
+      }
+      else if(144 <= temp2 && temp2 <= 146){  // if (145 < temp2 < 146) tuned
+        Serial.println("tuned");
+        Serial.println(temp2);
+        tune_status = 0;
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("D");
+        display.fillTriangle(75, 16, 67, 8, 84, 8, WHITE);
+        display.display();
+        tone(buzzer, 450);
+        delay(500);
+        noTone(buzzer);
+        temp3 == 1;
+      }
+      else{
+        Serial.println("Stray");
+        Serial.println(temp2);
+      }
+    }
+  }
+}
+
+void G_tune(){
+  int temp3 = 0;
+  float temp2;
+  int tune_status = 0;
+  while (temp3 == 0){
+    temp = analogRead(micPin);
+    if (!digitalRead(backButton)){
+      screen = 2;
+      updateTuneMenu();
+      delay(100);
+      while (!digitalRead(backButton));
+      break;
+    }
+    if (temp > 2500) {
+      temp2 = get_freq();
+      if(170 <= temp2 && temp2 <= 193){  // under
+        Serial.println("under");
+        Serial.println(temp2);
+        tune_status = -1;
+        float delta_f = temp2 - 180;
+        int angle = (9-delta_f) * 40/10;
+        int point = floor(delta_f * 6/10);
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("G");
+        display.fillTriangle(33+point, 12, 25+point, 4, 41+point, 4, WHITE);
+        display.display();
+        // motor_tight(angle);
+        motorRotateDelay(1, 1000);
+      }
+      else if(197 < temp2 && temp2 < 220){  // over
+        Serial.println("over");
+        Serial.println(temp2);
+        tune_status = 1;
+        float delta_f = temp2 - 196;
+        int angle = delta_f * 40/9;
+        int point = floor(delta_f * 6/9);
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("G");
+        display.fillTriangle(85+point, 12, 77+point, 4, 93+point, 4, WHITE);
+        display.display();
+        // motor_loose(angle);
+        motorRotateDelay(-1, 1000);
+      }
+      else if(190 <= temp2 && temp2 <= 196){  // if (190 < temp2 < 195) tuned
+        Serial.println("tuned");
+        Serial.println(temp2);
+        tune_status = 0;
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("G");
+        display.fillTriangle(75, 16, 67, 8, 84, 8, WHITE);
+        display.display();
+        tone(buzzer, 450);
+        delay(500);
+        noTone(buzzer);
+        temp3 == 1;
+      }
+      else{
+        Serial.println("Stray");
+        Serial.println(temp2);
+      }
+    }
+  }
+}
+
+void B_tune(){
+  int temp3 = 0;
+  float temp2;
+  int tune_status = 0;
+  while (temp3 == 0){
+    temp = analogRead(micPin);
+    if (!digitalRead(backButton)){
+      screen = 2;
+      updateTuneMenu();
+      delay(100);
+      while (!digitalRead(backButton));
+      break;
+    }
+    if (temp > 2500) {
+      temp2 = get_freq();
+      if((216 < temp2 && temp2 < 241) || (115 < temp2 && temp2 < 122)){  // under
+        Serial.println("under");
+        Serial.println(temp2);
+        tune_status = -1;
+        float delta_f = (235 < temp2 && temp2 < 241) ? (temp2 - 235) : (temp2 - 115);  
+        int angle = (235 < temp2 && temp2 < 241) ? floor((6-delta_f) * 40/6) : floor((7-delta_f) * 40/7);
+        int point = (235 < temp2 && temp2 < 241) ? floor(delta_f * 6/6) : floor(delta_f * 6/7);
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("B");
+        display.fillTriangle(33+point, 12, 25+point, 4, 41+point, 4, WHITE);
+        display.display();
+        // motor_tight(angle);
+        motorRotateDelay(1, 1000);
+      }
+      else if((251 < temp2 && temp2 < 268) || (124 < temp2 && temp2 < 130)){  // over
+        Serial.println("over");
+        Serial.println(temp2);
+        tune_status = 1;
+        float delta_f = (243 < temp2 && temp2 < 250) ? (temp2 - 243) : (temp2 - 124);
+        int angle = (243 < temp2 && temp2 < 250) ? floor(delta_f * 40/7) : floor(delta_f * 40/6);
+        int point = (243 < temp2 && temp2 < 250) ? floor(delta_f * 6/7) : floor(delta_f * 6/6);
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("B");
+        display.fillTriangle(85+point, 12, 77+point, 4, 93+point, 4, WHITE);
+        display.display();
+        // motor_loose(angle);
+        motorRotateDelay(-1, 1000);
+      }
+      else if ((241 <= temp2 && temp2 <= 251) || (122 <= temp2 && temp2 <= 124)){  // if (242 < temp2 < 243) tuned
+        Serial.println("tuned");
+        Serial.println(temp2);
+        tune_status = 0;
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("B");
+        display.fillTriangle(75, 16, 67, 8, 84, 8, WHITE);
+        display.display();
+        tone(buzzer, 450);
+        delay(500);
+        noTone(buzzer);
+        temp3 == 1;
+      }
+      else{
+        Serial.println("Stray");
+        Serial.println(temp2);
+      }
+    }
+  }
+}
+
+void Eh_tune(){
+  int temp3 = 0;
+  float temp2;
+  int tune_status = 0;
+  while (temp3 == 0){
+    temp = analogRead(micPin);
+    if (!digitalRead(backButton)){
+      screen = 2;
+      updateTuneMenu();
+      delay(100);
+      while (!digitalRead(backButton));
+      break;
+    }
+    if (temp > 2500) {
+      temp2 = get_freq();
+      if((145 < temp2 && temp2 < 162) || (290 < temp2 && temp2 < 331)){  // under
+        Serial.println("under");
+        Serial.println(temp2);
+        tune_status = -1;
+        float delta_f = (155 < temp2 && temp2 < 162) ? (temp2 - 155) : (temp2 - 325);
+        int angle = (155 < temp2 && temp2 < 162) ? floor((7-delta_f) * 40/7) : floor((7-delta_f) * 40/7);
+        int point = (155 < temp2 && temp2 < 162) ? floor(delta_f * 6/7) : floor(delta_f * 6/7);
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("Eh");
+        display.fillTriangle(33+point, 12, 25+point, 4, 41+point, 4, WHITE);
+        display.display();
+        // motor_tight(angle);
+        motorRotateDelay(1, 1000);
+      }
+      else if((164 < temp2 && temp2 < 170) || (334 < temp2 && temp2 < 345)){  // over
+        Serial.println("over");
+        Serial.println(temp2);
+        tune_status = 1;
+        float delta_f = (164 < temp2 && temp2 < 170) ? (temp2 - 164) : (temp2 - 334);
+        int angle = (164 < temp2 && temp2 < 170) ? floor(delta_f * 40/6) : floor(delta_f * 40/6);
+        int point = (164 < temp2 && temp2 < 170) ? floor(delta_f * 6/6) : floor(delta_f * 6/6);
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("Eh");
+        display.fillTriangle(85+point, 12, 77+point, 4, 93+point, 4, WHITE);
+        display.display();
+        // motor_loose(angle);
+        motorRotateDelay(-1, 1000);
+      }
+      else if ((162 <= temp2 && temp2 <= 164) || (332 <= temp2 && temp2 <= 334)){  // if (162 < temp2 < 164) tuned
+        Serial.println("tuned");
+        Serial.println(temp2);
+        tune_status = 0;
+        display.clearDisplay();
+        display.drawLine(25, 15, 65, 15, SSD1306_WHITE);  // left lines
+        display.drawLine(25, 16, 65, 16, SSD1306_WHITE);
+        display.drawLine(25, 17, 65, 17, SSD1306_WHITE);
+        display.drawLine(25, 18, 65, 18, SSD1306_WHITE);
+        display.drawLine(25, 19, 65, 19, SSD1306_WHITE);
+        display.drawLine(25, 20, 65, 20, SSD1306_WHITE);
+        
+        display.drawLine(85, 15, 125, 15, SSD1306_WHITE);  // right lines
+        display.drawLine(85, 16, 125, 16, SSD1306_WHITE);
+        display.drawLine(85, 17, 125, 17, SSD1306_WHITE);
+        display.drawLine(85, 18, 125, 18, SSD1306_WHITE);
+        display.drawLine(85, 19, 125, 19, SSD1306_WHITE);
+        display.drawLine(85, 20, 125, 20, SSD1306_WHITE);
+
+        display.drawLine(25, 21, 125, 21, SSD1306_WHITE);  // bottom lines
+        display.drawLine(25, 22, 125, 22, SSD1306_WHITE);
+        display.drawLine(25, 23, 125, 23, SSD1306_WHITE);
+        display.drawLine(25, 24, 125, 24, SSD1306_WHITE);
+        display.drawLine(25, 25, 125, 25, SSD1306_WHITE);
+        display.setCursor(0, 0);
+        display.print("Eh");
+        display.fillTriangle(75, 16, 67, 8, 84, 8, WHITE);
+        display.display();
+        tone(buzzer, 450);
+        delay(500);
+        noTone(buzzer);
+        temp3 == 1;
+      }
+      else{
+        Serial.println("Stray");
+        Serial.println(temp2);
+      }
+    }
+  }
+}
+
+void motor_rot_wind_CW(){  // only use delay for rotation control
+  digitalWrite(A1B, HIGH);
+  digitalWrite(A1A, LOW);
+  delay(50);  // ~ 45 degrees
+  digitalWrite(A1A, LOW);
+  digitalWrite(A1B, LOW);
+}
+
+void motor_rot_wind_CCW(){  // only use delay for rotation control
+  digitalWrite(A1A, HIGH);
+  digitalWrite(A1B, LOW);
+  delay(50);  // ~ 45 degrees
+  digitalWrite(A1A, LOW);
+  digitalWrite(A1B, LOW);
+}
+
+// PID motor control
+void readEncoder() {
+  int b = digitalRead(ENCB);
+  if (b>0) {
+    pos++;
+  }
+  else {
+    pos--;
+  }
+}
+
+void setMotor(int dir, int pwmVal) {
+  if (dir == 1){
+    analogWrite(A1A, pwmVal);
+    digitalWrite(A1B, LOW);
+  }
+  else if (dir == -1) {
+    analogWrite(A1B, pwmVal);
+    digitalWrite(A1A, LOW);
+  }
+  else {
+    digitalWrite(A1A, LOW);
+    digitalWrite(A1B, LOW);
+  }
+}
+
+// delay based motor rotate
+void motorRotateDelay(int dir, int time){
+  if (dir == 1){
+    // analogWrite(A1A, pwmVal);
+    digitalWrite(A1A, HIGH);
+    digitalWrite(A1B, LOW);
+    delay(time);
+    digitalWrite(A1A, LOW);
+  }
+  else if (dir == -1) {
+    // analogWrite(A1B, pwmVal);
+    digitalWrite(A1B, HIGH);
+    digitalWrite(A1A, LOW);
+    delay(time);
+    digitalWrite(A1B, LOW);
+  }
+  else {
+    digitalWrite(A1A, LOW);
+    digitalWrite(A1B, LOW);
+  }
+}
+
+
+// void PID_motor(int target){
+
+//   while (true){
+//   static int pidCount = 0;
+//   pidCount++;
+  
+//   // Rest of the PID_motor code...
+  
+//   Serial.print("PID Count: ");
+//   Serial.println(pidCount);
+
+//   // PID constants
+//   float kp = 1;
+//   float kd = 0.025;
+//   float ki = 0;
+
+  
+//   // time difference
+//   long currT = micros();
+
+//   float deltaT = ((float) (currT-prevT)/1.0e6);
+//   prevT = currT;
+
+//   // error
+//   int e = pos - target;
+
+//   // derivative
+//   float dedt = (e-eprev)/(deltaT);
+
+//   // integral
+//   // eintegral = eintegral + e*deltaT;
+
+//   // control signal
+//   float u = kp*e + kd*dedt;
+
+//   // motor power
+//   float pwr = fabs(u);
+  
+//   if(pwr>255){
+//     pwr = 255;
+//   }
+
+//   if(pwr<70){
+//     pwr = 70;
+//   }
+
+//   // motor direction
+//   int dir = 1;
+//   if(u<0){
+//     dir = -1;
+//   }
+
+//   // signal the motor
+//   setMotor(dir, pwr);
+
+//   // store prev error
+//   eprev = e;
+
+//   Serial.println("---------------");
+//   Serial.print(target);
+//   Serial.print(" ");
+//   Serial.print(pos);
+//   Serial.println();
+//   Serial.println(pwr);}
+  
+
+  
+// }
+
+// // Motor control to reach the target position (angle or steps)
+// void controlMotor(int target, int pwmPower) {
+//   // Motor constants
+//   int kp = 1;
+
+//   // Motor direction
+//   int dir = 1;
+//   if (target < pos) {
+//     dir = -1;
+//   }
+
+//   // Move towards the target position
+//   while (pos != target) {
+//     int error = target - pos;
+//     int u = kp * error;
+
+//     // Cap the control signal to stay within pwmPower range
+//     if (u > pwmPower) {
+//       u = pwmPower;
+//     } else if (u < -pwmPower) {
+//       u = -pwmPower;
+//     }
+
+//     // Set motor power and direction
+//     setMotor(dir, abs(u));
+
+//     // Read the encoder for position update
+//     readEncoder();
+//   }
+
+//   // Stop the motor after reaching the target
+//   setMotor(0, 0);
+// }
