@@ -274,7 +274,24 @@ void action1() {
 }
 void action2() {
   display.clearDisplay();
-  display.println(">Violin do");
+  display.setCursor(0, 0);
+  display.print(">G D A E");
+  display.display();
+  delay(1000);
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print(" G>D A E");
+  display.display();
+  delay(1000);
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print(" G D>A E");
+  display.display();
+  delay(1000);
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print(" G D A>E");
+  display.display();
   delay(1500);
 }
 void action3() {  // Semi-Auto
